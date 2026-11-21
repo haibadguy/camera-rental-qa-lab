@@ -1,0 +1,38 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Camera Rental{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'catalog/site.css' %}">
+  <script defer src="{% static 'catalog/site.js' %}"></script>
+</head>
+<body>
+  <a class="skip" href="#content">Đến nội dung</a>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Điều hướng chính">
+      <a class="brand" href="{% url 'equipment-list' %}"><span class="brand-mark" aria-hidden="true"></span>Camera Rental</a>
+      <div class="nav-links">
+        <a href="{% url 'equipment-list' %}">Danh mục</a>
+        {% if request.user.is_authenticated %}
+          {% if request.user.is_staff %}
+            <a href="{% url 'staff-equipment' %}">Kho thiết bị</a>
+            <a href="{% url 'staff-rentals' %}">Quản lý đơn thuê</a>
+          {% else %}
+            <a href="{% url 'my-rentals' %}">Đơn của tôi</a>
+          {% endif %}
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button-outline">Đăng xuất</button></form>
+        {% else %}
+          <a href="{% url 'login' %}">Đăng nhập</a>
+          <a class="button button-outline" href="{% url 'register' %}">Đăng ký</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+  <main class="container main" id="content">
+    {% for message in messages %}<p class="notice notice-{{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

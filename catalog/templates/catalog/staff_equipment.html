@@ -1,0 +1,22 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Kho thiết bị | Camera Rental{% endblock %}
+{% block content %}
+  <div class="heading-row"><h1>Kho thiết bị</h1><a class="button" href="{% url 'new-equipment' %}">Thêm thiết bị</a></div>
+  <ul class="cards">
+    {% for item in equipment %}
+      <li class="panel">
+        <p class="code">{{ item.get_kind_display }} · {{ item.code }}</p>
+        <h2>{{ item.name }}</h2>
+        <p class="muted">{% if item.is_active %}Đang nhận đặt thuê{% else %}Đã ngừng nhận đặt thuê{% endif %}</p>
+        <dl class="details">
+          <dt>Tổng tồn</dt><dd>{{ item.total_stock }}</dd>
+          <dt>Đang ở ngoài kho</dt><dd>{{ item.outstanding }}</dd>
+          <dt>Có thực tế trong kho</dt><dd>{{ item.available_now }}</dd>
+          <dt>Giá thuê</dt><dd>{{ item.daily_rate_vnd|vnd }}/ngày</dd>
+        </dl>
+        <a href="{% url 'edit-equipment' item.pk %}">Sửa thiết bị</a>
+      </li>
+    {% empty %}<li class="panel">Chưa có thiết bị.</li>{% endfor %}
+  </ul>
+{% endblock %}

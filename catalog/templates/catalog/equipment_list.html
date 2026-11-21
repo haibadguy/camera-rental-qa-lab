@@ -1,0 +1,34 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Danh mục thiết bị | Camera Rental{% endblock %}
+{% block content %}
+  <section class="hero">
+    <h1>Thuê máy ảnh và ống kính</h1>
+    <p>Tìm thiết bị, chọn kỳ thuê và xem số lượng còn trống theo lịch.</p>
+  </section>
+  <form method="get" class="panel filters" aria-label="Lọc thiết bị và tra cứu tồn kho">
+    {% for field in form %}
+      <div>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
+    {% endfor %}
+    <button>Lọc thiết bị</button>
+    {% if request.GET %}<a href="{% url 'equipment-list' %}">Xóa bộ lọc</a>{% endif %}
+    {% if form.non_field_errors %}<div class="filter-error">{{ form.non_field_errors }}</div>{% endif %}
+  </form>
+  <h2 class="section-title">Danh mục thiết bị</h2>
+  <ul class="cards">
+    {% for item in equipment %}
+      <li class="card">
+        {% include "catalog/equipment_art.html" %}
+        <div class="card-body">
+          <p class="code">{{ item.get_kind_display }} · {{ item.code }}</p>
+          <h3><a href="{% url 'equipment-detail' item.pk %}{% if item.available_stock != None %}?pickup_date={{ form.cleaned_data.pickup_date|date:'Y-m-d' }}&amp;return_date={{ form.cleaned_data.return_date|date:'Y-m-d' }}{% endif %}">{{ item.name }}</a></h3>
+          {% if item.specifications %}<p class="muted">{{ item.specifications|truncatewords:12 }}</p>{% endif %}
+          <p class="price">{{ item.daily_rate_vnd|vnd }}/ngày</p>
+          {% if item.available_stock != None %}<p class="muted">Còn theo lịch: {{ item.available_stock }}</p>{% endif %}
+        </div>
+      </li>
+    {% empty %}
+      <li class="panel">{% if request.GET %}Không tìm thấy thiết bị phù hợp.{% else %}Chưa có thiết bị trong danh mục.{% endif %}</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "catalog/base.html" %}
+{% load pricing l10n %}
+{% block title %}{{ title }} | Camera Rental QA Lab{% endblock %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  {% if booking_item %}<p class="muted">{{ booking_item.daily_rate_vnd|vnd }}/ngày mỗi thiết bị. Kỳ thuê từ 1 đến 30 ngày, tính đến trước ngày trả.</p>{% endif %}
+  <form method="post" class="panel form-panel"{% if booking_item %} data-daily-rate="{{ booking_item.daily_rate_vnd|unlocalize }}"{% endif %}>
+    {% csrf_token %}
+    {{ form.as_p }}
+    {% if booking_item %}<p class="notice" data-booking-estimate hidden><strong>Tạm tính</strong> · <output for="id_pickup_date id_return_date id_quantity" aria-live="polite"></output></p>{% endif %}
+    <button>{{ submit_label|default:"Lưu" }}</button>
+  </form>
+{% endblock %}

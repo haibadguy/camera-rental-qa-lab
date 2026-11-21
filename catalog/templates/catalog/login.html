@@ -1,0 +1,12 @@
+{% extends "catalog/base.html" %}
+{% block title %}Đăng nhập | Camera Rental QA Lab{% endblock %}
+{% block content %}
+  <h1>Đăng nhập</h1>
+  <form method="post" class="panel form-panel">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button>Đăng nhập</button>
+  </form>
+  <p>Chưa có tài khoản? <a href="{% url 'register' %}">Đăng ký tài khoản khách hàng</a>.</p>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}{{ item.name }} | Camera Rental{% endblock %}
+{% block content %}
+  <p><a href="{% url 'equipment-list' %}">‹ Danh mục thiết bị</a></p>
+  <div class="product-detail">
+    {% include "catalog/equipment_art.html" %}
+    <section class="panel">
+      <p class="code">{{ item.get_kind_display }} · {{ item.code }}</p>
+      <h1>{{ item.name }}</h1>
+      <p class="price">{{ item.daily_rate_vnd|vnd }}/ngày</p>
+      <h2>Thông số</h2>
+      {% if item.specifications %}<div class="specs">{{ item.specifications }}</div>{% else %}<p class="muted">Thiết bị chưa có thông số chi tiết.</p>{% endif %}
+      <div class="product-booking">
+        <h2>Lịch thuê</h2>
+        <p class="muted">Thuê từ 1 đến 30 ngày. Ngày trả không tính tiền thuê.</p>
+        <form method="get" class="period-form">
+          {{ period_form.non_field_errors }}
+          <div class="date-fields">
+            {% for field in period_form %}<div>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+          </div>
+          <button class="button-outline">Kiểm tra lịch trống</button>
+        </form>
+        {% if availability != None %}
+          {% if availability > 0 %}
+            <p class="notice notice-success" role="status">Còn {{ availability }} thiết bị theo lịch đã chọn.</p>
+          {% else %}
+            <p class="notice notice-warning" role="status">Không còn thiết bị theo lịch này. Hãy chọn kỳ thuê khác.</p>
+          {% endif %}
+        {% endif %}
+        {% if availability != 0 %}<p><a class="button" href="{{ booking_url }}">Đặt thuê thiết bị</a></p>{% endif %}
+      </div>
+    </section>
+  </div>
+{% endblock %}
