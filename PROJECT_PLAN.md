@@ -16,13 +16,19 @@ Cuối M2, đã có bằng chứng kỹ thuật local cho một phần M3. Audit
 | T02 · S0 · Checkpoint local | P0 / S | T01 | DONE · `8e0a4d9` | Kiểm kê diff, tệp mới, assets và secrets. Review staged diff, tạo commit checkpoint và đọc lại từ bản sao checkout độc lập. |
 | T03 · M1/M3 · Vá dependency | P0 / M | T02 | DONE · `40a2a8b` | Nâng DRF lên 3.18.3 và pip lên 26.2. Cold build, `pip check`, quét package cài thực tế, PostgreSQL suite và HTTP smoke đạt với hợp đồng API cũ. |
 | T04 · M1 · Kiểm tra hợp đồng và dữ liệu | P0 / M | T03 | DONE · `329d945` | Django check và drift đạt. Trên DB riêng, nâng fixture `catalog.0002` lên `0004`, đối chiếu ID/FK, giá, ngày, trạng thái, timestamp cũ và phân loại `LEN-*`. Hai ca đồng thời phải cho `201/409` và `200/409` cùng số hàng đúng. |
-| T05 · M2 · Duyệt UX | P0 / M | T03, dữ liệu từ T04 | Kiểm tra kỹ thuật đạt · Chờ Hải duyệt | Kiểm tra danh mục, xác thực, kỳ thuê, giá, đặt/hủy, kho, đơn staff và trang lỗi. Xác minh desktop/mobile, bàn phím, thông báo lỗi và cấu hình nhận–trả trống/mẫu. Hải duyệt trải nghiệm để G2 pass. |
-| T06 · M3 · Xác minh ứng viên local | P0 / M | T04, kiểm tra kỹ thuật T05 | Local PASS · `329d945` | Dựng từ SHA sạch bằng `Verify` trên cổng trống. Ghi SHA, project, phiên bản, images, migrations, seed lặp, PostgreSQL, HTTP smoke, auth/ownership/CSRF và exit code. |
-| T07 · M3 · GitHub CI | P0 / S | T06, Hải duyệt push và mở PR | BLOCKED · Chờ quyền | Ghi link và kết luận CI xanh đúng SHA ứng viên. Chạy lại kiểm chứng liên quan nếu SHA thay đổi. |
+| T05 · M2 · Duyệt UX | P0 / M | T03, dữ liệu từ T04 | DONE · Hải duyệt G2 | Kiểm tra danh mục, xác thực, kỳ thuê, giá, đặt/hủy, kho, đơn staff và trang lỗi. Xác minh desktop/mobile, bàn phím, thông báo lỗi và cấu hình nhận–trả trống/mẫu. Hải duyệt trải nghiệm để G2 pass. |
+| T06 · M3 · Xác minh ứng viên local | P0 / M | T04, kiểm tra kỹ thuật T05 | DONE · `d9b052e` | Dựng từ SHA sạch bằng `Verify` trên cổng trống. Ghi SHA, project, phiên bản, images, migrations, seed lặp, PostgreSQL, HTTP smoke, auth/ownership/CSRF và exit code. |
+| T07 · M3 · GitHub CI | P0 / S | T06, Hải duyệt push và mở PR | DONE · CI xanh trên `d9b052e` | Ghi link và kết luận CI xanh đúng SHA ứng viên. Chạy lại kiểm chứng liên quan nếu SHA thay đổi. |
 | T08 · M4 · Handoff độc lập | P0 / S | T06 | DONE · `329d945` | Reviewer hoặc agent có ngữ cảnh mới dùng tài liệu repo dựng và chạy Verify, rồi chỉ đúng module, test, tác động migration và rollback cho một thay đổi giả định. |
-| T09 · M4 · Đóng băng Base | P0 / S | G0–G3 và T08 | Chờ | Hải duyệt ứng viên, merge, release và tag riêng. Nếu SHA sau merge đổi, kiểm chứng đúng commit định gắn tag. `v1.0.0-qa-baseline` trỏ SHA đã duyệt. |
+| T09 · M4 · Đóng băng Base | P0 / S | G0–G3 và T08 | DONE · `v1.0.0-qa-baseline` | Hải duyệt ứng viên, merge, release và tag riêng. Nếu SHA sau merge đổi, kiểm chứng đúng commit định gắn tag. `v1.0.0-qa-baseline` trỏ SHA đã duyệt. |
 
-Việc kế tiếp do Hải quyết định là nghiệm thu trải nghiệm local (T05) và quyền push nhánh ứng viên, mở PR (T07). Xem [bằng chứng theo commit](docs/verification.md) khi duyệt.
+G0–G4 đã đạt cho baseline `v1.0.0-qa-baseline` tại `31ca8a0`. Tag là mốc đối chiếu cho các thay đổi sau phát hành. [GitHub Release](https://github.com/haibadguy/camera-rental-qa-lab/releases/tag/v1.0.0-qa-baseline) · [Bằng chứng theo commit](docs/verification.md)
+
+## Công việc sản phẩm hiện tại
+
+R08 · Bản sửa thông báo mật khẩu quá ngắn đã qua kiểm chứng local. Form trả lời bằng tiếng Việt, giữ ngưỡng tám ký tự và các kiểm tra mật khẩu hiện có. Đăng ký và trở lại trang đặt thuê hoạt động. Nhánh `fix/r08-password-localization` chờ duyệt tích hợp. [Kiểm chứng kỹ thuật](docs/verification.md)
+
+Kiểm chứng kỹ thuật đi cùng từng thay đổi sản phẩm. QA độc lập và hồ sơ portfolio là bước cuối, sau khi các sửa đổi sản phẩm đã hoàn tất và Hải xác nhận bản kiểm thử cuối.
 
 ## Biên thay đổi và kiểm chứng
 
