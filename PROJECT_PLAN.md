@@ -13,14 +13,16 @@ Cuối M2, đã có bằng chứng kỹ thuật local cho một phần M3. Audit
 | Task | Ưu tiên / nỗ lực | Phụ thuộc | Trạng thái | Tiêu chí kết thúc |
 | --- | --- | --- | --- | --- |
 | T01 · S0 · Khóa kế hoạch | P0 / S | Hải duyệt | DONE | Kế hoạch, scope và hàng đợi ở đây. Roadmap và đặc tả liên kết về đúng nguồn. |
-| T02 · S0 · Checkpoint local | P0 / S | T01 | Đang làm | Kiểm kê diff, tệp mới, assets và secrets. Review staged diff, tạo commit checkpoint và đọc lại từ bản sao checkout độc lập. |
-| T03 · M1/M3 · Vá dependency | P0 / M | T02 | Chờ | Nâng DRF lên 3.18.3 và pip lên 26.2. Cold build, `pip check`, quét package cài thực tế, PostgreSQL suite và HTTP smoke đạt với hợp đồng API cũ. |
-| T04 · M1 · Kiểm tra hợp đồng và dữ liệu | P0 / M | T03 | Chờ | Django check và drift đạt. Trên DB riêng, nâng fixture `catalog.0002` lên `0004`, đối chiếu ID/FK, giá, ngày, trạng thái, timestamp cũ và phân loại `LEN-*`. Hai ca đồng thời phải cho `201/409` và `200/409` cùng số hàng đúng. |
-| T05 · M2 · Duyệt UX | P0 / M | T03, dữ liệu từ T04 | Chờ | Kiểm tra danh mục, xác thực, kỳ thuê, giá, đặt/hủy, kho, đơn staff và trang lỗi. Xác minh desktop/mobile, bàn phím, thông báo lỗi và cấu hình nhận–trả trống/mẫu. Hải duyệt trải nghiệm để G2 pass. |
-| T06 · M3 · Xác minh ứng viên local | P0 / M | T04, kiểm tra kỹ thuật T05 | Chờ | Dựng từ SHA sạch bằng `Verify` trên cổng trống. Ghi SHA, project, phiên bản, images, migrations, seed lặp, PostgreSQL, HTTP smoke, auth/ownership/CSRF và exit code. |
-| T07 · M3 · GitHub CI | P0 / S | T06, Hải duyệt push và mở PR | Chờ | Ghi link và kết luận CI xanh đúng SHA ứng viên. Chạy lại kiểm chứng liên quan nếu SHA thay đổi. |
-| T08 · M4 · Handoff độc lập | P0 / S | T06 | Chờ | Reviewer hoặc agent có ngữ cảnh mới dùng tài liệu repo dựng và chạy Verify, rồi chỉ đúng module, test, tác động migration và rollback cho một thay đổi giả định. |
+| T02 · S0 · Checkpoint local | P0 / S | T01 | DONE · `8e0a4d9` | Kiểm kê diff, tệp mới, assets và secrets. Review staged diff, tạo commit checkpoint và đọc lại từ bản sao checkout độc lập. |
+| T03 · M1/M3 · Vá dependency | P0 / M | T02 | DONE · `40a2a8b` | Nâng DRF lên 3.18.3 và pip lên 26.2. Cold build, `pip check`, quét package cài thực tế, PostgreSQL suite và HTTP smoke đạt với hợp đồng API cũ. |
+| T04 · M1 · Kiểm tra hợp đồng và dữ liệu | P0 / M | T03 | DONE · `329d945` | Django check và drift đạt. Trên DB riêng, nâng fixture `catalog.0002` lên `0004`, đối chiếu ID/FK, giá, ngày, trạng thái, timestamp cũ và phân loại `LEN-*`. Hai ca đồng thời phải cho `201/409` và `200/409` cùng số hàng đúng. |
+| T05 · M2 · Duyệt UX | P0 / M | T03, dữ liệu từ T04 | Kiểm tra kỹ thuật đạt · Chờ Hải duyệt | Kiểm tra danh mục, xác thực, kỳ thuê, giá, đặt/hủy, kho, đơn staff và trang lỗi. Xác minh desktop/mobile, bàn phím, thông báo lỗi và cấu hình nhận–trả trống/mẫu. Hải duyệt trải nghiệm để G2 pass. |
+| T06 · M3 · Xác minh ứng viên local | P0 / M | T04, kiểm tra kỹ thuật T05 | Local PASS · `329d945` | Dựng từ SHA sạch bằng `Verify` trên cổng trống. Ghi SHA, project, phiên bản, images, migrations, seed lặp, PostgreSQL, HTTP smoke, auth/ownership/CSRF và exit code. |
+| T07 · M3 · GitHub CI | P0 / S | T06, Hải duyệt push và mở PR | BLOCKED · Chờ quyền | Ghi link và kết luận CI xanh đúng SHA ứng viên. Chạy lại kiểm chứng liên quan nếu SHA thay đổi. |
+| T08 · M4 · Handoff độc lập | P0 / S | T06 | DONE · `329d945` | Reviewer hoặc agent có ngữ cảnh mới dùng tài liệu repo dựng và chạy Verify, rồi chỉ đúng module, test, tác động migration và rollback cho một thay đổi giả định. |
 | T09 · M4 · Đóng băng Base | P0 / S | G0–G3 và T08 | Chờ | Hải duyệt ứng viên, merge, release và tag riêng. Nếu SHA sau merge đổi, kiểm chứng đúng commit định gắn tag. `v1.0.0-qa-baseline` trỏ SHA đã duyệt. |
+
+Việc kế tiếp do Hải quyết định là nghiệm thu trải nghiệm local (T05) và quyền push nhánh ứng viên, mở PR (T07). Xem [bằng chứng theo commit](docs/verification.md) khi duyệt.
 
 ## Biên thay đổi và kiểm chứng
 

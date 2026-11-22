@@ -47,7 +47,11 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 .\scripts\dev.ps1 -Action Verify -Port 8010
 ```
 
-`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Nhật ký in tên project và đường dẫn file cấu hình để có thể xem log hoặc giữ môi trường kiểm tra. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
+`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Bộ test kiểm tra hai ca đồng thời và bảo toàn lịch sử khi nâng schema từ `catalog.0002`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
+
+Để xác minh ứng viên, dùng checkout sạch của SHA đã chọn và chạy từ thư mục gốc của checkout đó. Ghi SHA vào kết quả. Có thể thêm `-Project camera-base-rc` để phân biệt nhóm kiểm tra, script vẫn tự thêm hậu tố riêng vào tên project.
+
+Khi duyệt Base local/demo, mở cổng của project biệt lập. Từ danh mục, tìm `LEN-001`, chọn kỳ tương lai, thử đăng ký, đặt đơn và hủy từ **Đơn của tôi**. Đăng nhập bằng tài khoản staff để xem **Kho thiết bị**, **Quản lý đơn thuê** và đơn demo ở nhóm **Trả hôm nay**. Dùng địa chỉ, giờ và kênh hỗ trợ mẫu nếu cần xem trạng thái cấu hình có nội dung.
 
 `Reset` tạo một project mới có dữ liệu demo sạch và giữ nguyên dữ liệu của project cũ. Chọn cổng khác nếu bản đang chạy vẫn dùng cổng mặc định.
 
@@ -59,7 +63,8 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 `Stop` dừng project mặc định và giữ dữ liệu. Để dừng project biệt lập, dùng đúng tên project và file môi trường đã in khi khởi động.
 
 ```powershell
-docker compose --env-file <path-to-env> -p <project-name> down
+docker compose --env-file <path-to-env> -p <project-name> logs web db
+docker compose --env-file <path-to-env> -p <project-name> stop
 ```
 
-Nếu dùng volume từ bản cũ, đặt `POSTGRES_PASSWORD` trong `.env` bằng mật khẩu đã dùng để khởi tạo volume đó. PostgreSQL chỉ áp dụng mật khẩu từ môi trường khi tạo volume mới. Khi gặp lỗi, xem `docker compose logs web db`. Nếu phiên Codex báo `permission denied` nhưng terminal Windows hiện cả Client và Server, chạy lệnh `Verify` trong terminal Windows đó.
+Nếu dùng volume từ bản cũ, đặt `POSTGRES_PASSWORD` trong `.env` bằng mật khẩu đã dùng để khởi tạo volume đó. PostgreSQL chỉ áp dụng mật khẩu từ môi trường khi tạo volume mới. Nếu phiên Codex báo `permission denied` nhưng terminal Windows hiện cả Client và Server, chạy lệnh `Verify` trong terminal Windows đó.

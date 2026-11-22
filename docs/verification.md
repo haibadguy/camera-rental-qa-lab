@@ -1,6 +1,23 @@
 # Trạng thái xác minh Camera Rental Base v1.0
 
-**Bản Base đang chạy local ở cổng 8000 · Chờ GitHub Actions và duyệt Base**
+**Ứng viên local/demo · Chờ Hải duyệt trải nghiệm và GitHub Actions**
+
+## Kiểm chứng ứng viên ngày 22/11/2026
+
+Nhánh `refactor/modular-structure`. Nguồn ứng viên kỹ thuật ở `329d945c46f54813f598150e830349fe899ce817`. Các commit kế tiếp chỉ ghi bằng chứng trong tài liệu. Kết quả GitHub Actions sẽ ghi theo SHA thực sự dùng cho PR hoặc tag.
+
+| Kiểm tra | Bằng chứng |
+| --- | --- |
+| G0 · Checkpoint | Pass. `8e0a4d98ba78288aa9d502526d5b2e28c6da8202` giữ phần refactor, giao diện, assets và Master Plan. `git diff --cached --check` đạt. Rà dấu hiệu secret và đường dẫn runtime trên 75 file đã stage, không có kết quả khớp. `git -c core.autocrlf=false archive` xuất 75 file khớp byte với các blob checkpoint. |
+| Cold build và dependency | Pass, exit 0 với `docker compose --env-file .env -p camera-base-deps-40a2a8b build --pull --no-cache web` trên archive `40a2a8b6744e4c889e0663136bb6ba2cc0163cc9`, cổng 18033. DRF 3.18.3, pip 26.2, Django 5.2.19 và psycopg 3.3.9. `pip check` đạt, tra OSV 9 package Python cài trong image trả 0 advisory. Suite trước khi thêm migration test đạt 31/31 và HTTP smoke đạt. |
+| G1 · Nghiệp vụ và dữ liệu | Pass local. `python manage.py test catalog.tests.LegacyRentalMigrationTests catalog.tests.ConcurrentBookingTests --verbosity 2` đạt 3/3, không skip. Fixture PostgreSQL `0002` chứa ba trạng thái `CONFIRMED`, `CANCELLED`, `RETURNED`. Lên `0004` giữ ID, FK, kỳ thuê, lượng, giá, trạng thái, timestamp trả và `picked_up_at=NULL`. Thiết bị `LEN-LEGACY` thành loại ống kính. Hai kiểm tra đồng thời xác nhận `201/409` cho đặt và `200/409` cho bàn giao. |
+| G2 · Trình duyệt | Pass kỹ thuật trên runtime `40a2a8b` ở 1440 × 1000, 390 × 844 và 320 × 780. Chrome kiểm tra lỗi ngày giữ bộ lọc, đăng ký/đăng nhập giữ kỳ, giá, hết hàng, đặt/hủy, kho, từ chối giảm tồn, ngừng nhận, bàn giao, ghi nhận trả, `NO_SHOW` và trang `403/404`. Chạy cả khi thông tin nhận–trả trống và khi có địa chỉ, giờ, điện thoại, URL mẫu. Đã xem ảnh form đặt và đơn staff. Không có tràn ngang, lỗi JS hoặc vi phạm trong các quy tắc axe được quét. Hải còn cần duyệt trải nghiệm. |
+| G3 · Verify từ Git | Pass, exit 0 với `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-base-rc -Port 18034` trên archive `329d945`. Project `camera-base-rc-cf21420d`, volume mới, PostgreSQL 17.11, Docker 29.6.2, Compose 5.3.1. Áp dụng `catalog.0001`–`0004`, drift sạch, 32/32 test đạt trong 3,572 giây, HTTP smoke pass. SHA-256 của 53 file runtime/test khớp archive. Image web `sha256:f44f1f53c9bb6fabcdaa619aa4d471373df00cdb55437ef485e6df63407cc8f4`. |
+| G3 · An toàn của luồng local | Pass trên cùng project. Chạy seed lại không đổi bản ghi thiết bị, tài khoản hay đơn. Xác nhận API ẩn danh `401`, khách vào kho `403`, đọc đơn người khác `404`, GET đăng xuất `405`. POST thiếu CSRF bị từ chối mà số đơn giữ nguyên. POST JSON có session và CSRF tạo đúng một đơn với giá dạng chuỗi. Headers `X-Frame-Options: DENY` và `nosniff` đúng. |
+| G4 · Handoff độc lập | Pass local. Agent có ngữ cảnh mới dùng archive `329d945`, chạy `.\scripts\dev.ps1 -Action Verify -Project camera-handoff -Port 18036` exit 0 trong project `camera-handoff-e87b4df1`. PostgreSQL/web healthy, migrations và seed đạt, 32/32 test và smoke đạt, `GET /` trả `200`. Agent xác định đúng đường sửa giả định cho R01 `views.manage_equipment` → `services.update_equipment` → `equipment.update_equipment` → `inventory.minimum_stock`, test cần chạy và cách hoàn tác. Hướng dẫn xem log biệt lập được bổ sung sau review. |
+| GitHub Actions | Not Run. Chờ Hải duyệt push nhánh ứng viên và mở PR. |
+
+Dữ liệu kiểm chứng nằm trên project biệt lập. Port mặc định 8000 và dữ liệu phát triển được giữ riêng.
 
 ## Luồng từ đặt đến nhận máy ngày 22/11/2026
 
