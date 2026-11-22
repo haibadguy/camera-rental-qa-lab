@@ -161,7 +161,7 @@ class RegistrationTests(TestCase):
         self.assertRedirects(self.client.get(booking), login)
         self.assertContains(self.client.get(login), f'href="{register}"', count=2)
 
-        password = "M1-Client-Forest-47"
+        password = "V7!kQ3@z"
         data = {"username": "new-renter", "password1": password, "password2": password}
         self.assertEqual(
             self.client.post(register, data | {"password2": "different"}).status_code,
@@ -215,12 +215,32 @@ class RegistrationTests(TestCase):
         )
         self.assertEqual(self.client.get(reverse("staff-rentals")).status_code, 403)
 
-    def test_password_validation_rejects_invalid_registration(self):
-        response = self.client.post(
-            reverse("register"),
-            {"username": "new-customer", "password1": "123", "password2": "123"},
-        )
-        self.assertEqual(response.status_code, 400)
+    def test_password_validation_displays_vietnamese_minimum_length_error(self):
+        for password, expected_codes in (
+            ("V7!kQ3@", ["password_too_short"]),
+            (
+                "123",
+                ["password_too_short", "password_too_common", "password_entirely_numeric"],
+            ),
+        ):
+            with self.subTest(password=password):
+                response = self.client.post(
+                    reverse("register"),
+                    {
+                        "username": "new-customer",
+                        "password1": password,
+                        "password2": password,
+                    },
+                )
+                self.assertEqual(response.status_code, 400)
+                errors = response.context["form"].errors.as_data()["password2"]
+                self.assertEqual([error.code for error in errors], expected_codes)
+                self.assertEqual(
+                    errors[0].message, "Mật khẩu của bạn phải chứa ít nhất 8 ký tự."
+                )
+                self.assertNotContains(
+                    response, "This password is too short.", status_code=400
+                )
         self.assertFalse(get_user_model().objects.exists())
 
 

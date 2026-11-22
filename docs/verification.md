@@ -1,6 +1,30 @@
 # Trạng thái xác minh Camera Rental Base v1.0
 
-**Ứng viên local/demo · Chờ Hải duyệt trải nghiệm và GitHub Actions**
+**Base local/demo đã đóng băng · G0–G4 đạt**
+
+## Kiểm chứng kỹ thuật bản sửa R08 · 22/11/2026
+
+Nhánh sản phẩm `fix/r08-password-localization` dựa trên `31ca8a0`. Form đăng ký tiếp tục dùng Django auth. Validator độ dài dùng câu hướng dẫn tiếng Việt sẵn có khi locale là vi, giữ ngưỡng, mã lỗi và hành vi của Django.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Khởi động biệt lập | `.\scripts\dev.ps1 -Action Reset -Project camera-product-r08 -Port 18041` build được image. Docker hết dải IP mặc định khi tạo mạng. Chạy lại `docker compose --env-file <env> -p camera-product-r08-f40d5f7b -f compose.yaml -f <override-tạm> up --no-build --wait` với subnet riêng đã kiểm tra xung đột. Web và PostgreSQL healthy trên volume mới, dùng Django 5.2.19 và PostgreSQL 17.11. |
+| R08 | `python manage.py test catalog.tests.RegistrationTests --verbosity 2` exit 0, 4/4 test. Mật khẩu bảy ký tự và mật khẩu số bị từ chối với thông báo tiếng Việt. Mật khẩu hợp lệ đúng tám ký tự đăng ký, đăng nhập và trở về kỳ thuê đã chọn. |
+| Hồi quy | `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test` và `python scripts/smoke.py` đều exit 0. Không có migration drift. PostgreSQL suite 32/32, HTTP smoke đạt. |
+| HTTP và locale | POST `/register/` của cả hai mật khẩu sai trả 400. HTML có thông báo tiếng Việt và không còn câu lỗi độ dài tiếng Anh. Locale en trả đúng câu mặc định của validator Django. |
+| CI | Not Run cho nhánh sửa. Bằng chứng trên đây là kiểm chứng kỹ thuật local. |
+
+## Xác minh SHA ứng viên trên GitHub ngày 22/11/2026
+
+Hải đã duyệt G2, push nhánh `refactor/modular-structure` và mở [PR #2](https://github.com/haibadguy/camera-rental-qa-lab/pull/2) vào `main`. Đầu PR là `d9b052e28e528b92029ddb4f4d105420629f1182`. Commit này chỉ thay đổi tài liệu so với `329d945`. Cold build và Verify từ archive đúng SHA đạt 32/32 test và HTTP smoke trên project `camera-base-review-7c6f8676`.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| GitHub Actions · push | **Pass.** Log checkout xác nhận đúng SHA ứng viên. Compose build, migration và seed, Django check, migration drift, 32/32 test PostgreSQL và HTTP smoke đều đạt. [Run 45003909494](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45003909494) |
+| GitHub Actions · pull request | **Pass.** Job `postgres-integration` đạt cả bước dựng môi trường, kiểm tra PostgreSQL và live HTTP. [Run 45003924458](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45003924458) |
+| GitHub Actions · commit trên main | **Pass.** Hải đã merge PR #2 vào `31ca8a0d282ae1e29017d7f3e6ab0f7973d27fee`. `git diff --exit-code d9b052e origin/main` trả 0. Log checkout xác nhận SHA merge và CI đạt 32/32 test PostgreSQL, Django check, migration drift và HTTP smoke. [Run 45004107737](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45004107737) |
+| GitHub Actions · tag baseline | **Pass.** Log checkout xác nhận `v1.0.0-qa-baseline` trỏ đúng SHA đã phát hành. Django check, migration drift, 32/32 test PostgreSQL và HTTP smoke đều đạt. [Run 45005176692](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45005176692) |
+| G4 · Đóng băng | **Pass.** Sau khi Hải duyệt tag và release, đã push annotated tag `v1.0.0-qa-baseline` và xác minh tag trỏ đúng `31ca8a0d282ae1e29017d7f3e6ab0f7973d27fee`. GitHub Release đã công bố ngày 22/11/2026. [Release](https://github.com/haibadguy/camera-rental-qa-lab/releases/tag/v1.0.0-qa-baseline) |
 
 ## Kiểm chứng ứng viên ngày 22/11/2026
 
@@ -15,7 +39,7 @@ Nhánh `refactor/modular-structure`. Nguồn ứng viên kỹ thuật ở `329d9
 | G3 · Verify từ Git | Pass, exit 0 với `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-base-rc -Port 18034` trên archive `329d945`. Project `camera-base-rc-cf21420d`, volume mới, PostgreSQL 17.11, Docker 29.6.2, Compose 5.3.1. Áp dụng `catalog.0001`–`0004`, drift sạch, 32/32 test đạt trong 3,572 giây, HTTP smoke pass. SHA-256 của 53 file runtime/test khớp archive. Image web `sha256:f44f1f53c9bb6fabcdaa619aa4d471373df00cdb55437ef485e6df63407cc8f4`. |
 | G3 · An toàn của luồng local | Pass trên cùng project. Chạy seed lại không đổi bản ghi thiết bị, tài khoản hay đơn. Xác nhận API ẩn danh `401`, khách vào kho `403`, đọc đơn người khác `404`, GET đăng xuất `405`. POST thiếu CSRF bị từ chối mà số đơn giữ nguyên. POST JSON có session và CSRF tạo đúng một đơn với giá dạng chuỗi. Headers `X-Frame-Options: DENY` và `nosniff` đúng. |
 | G4 · Handoff độc lập | Pass local. Agent có ngữ cảnh mới dùng archive `329d945`, chạy `.\scripts\dev.ps1 -Action Verify -Project camera-handoff -Port 18036` exit 0 trong project `camera-handoff-e87b4df1`. PostgreSQL/web healthy, migrations và seed đạt, 32/32 test và smoke đạt, `GET /` trả `200`. Agent xác định đúng đường sửa giả định cho R01 `views.manage_equipment` → `services.update_equipment` → `equipment.update_equipment` → `inventory.minimum_stock`, test cần chạy và cách hoàn tác. Hướng dẫn xem log biệt lập được bổ sung sau review. |
-| GitHub Actions | Not Run. Chờ Hải duyệt push nhánh ứng viên và mở PR. |
+| GitHub Actions | Not Run tại thời điểm kiểm tra local này. Kết quả GitHub cho commit ứng viên nằm ở mục trên. |
 
 Dữ liệu kiểm chứng nằm trên project biệt lập. Port mặc định 8000 và dữ liệu phát triển được giữ riêng.
 
