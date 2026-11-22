@@ -1,17 +1,17 @@
-# Camera Rental QA Lab
+# Camera Rental Management Platform
 
-Ứng dụng cho thuê máy ảnh và ống kính. Khách có thể tra lịch ngay trên trang thiết bị, xem tiền thuê tạm tính và quản lý đơn của mình. Nhân viên quản lý kho và xử lý các đơn đã đặt.
+Camera Rental phát triển phần mềm vận hành cho thuê máy ảnh, ống kính và thiết bị quay chụp. Mục tiêu v2.0 là nối đặt thuê nhiều thiết bị với giữ lịch, giao nhận theo từng tài sản, bảo trì và quyết toán cọc. [Thiết kế sản phẩm v2.0](docs/v2-product-design.md)
 
-Base MVP gồm đăng ký và đăng nhập khách, danh mục, tra cứu theo ngày, đặt và hủy đơn, bàn giao, ghi nhận trả và quản lý tồn kho. Web và API dùng chung nghiệp vụ. Thông tin tài khoản demo và trạng thái chạy nằm trong [thiết lập local](docs/setup.md).
+Phiên bản chạy hiện tại là Base v1.0 local/demo. Khách có thể đăng ký, đăng nhập, tìm thiết bị, tra lịch, đặt và hủy đơn. Nhân viên quản lý tồn, bàn giao và ghi nhận trả. Web và API dùng chung nghiệp vụ. [Thiết lập local và tài khoản demo](docs/setup.md)
 
 | Bạn cần | Đọc |
 | --- | --- |
-| Biết mốc đang làm | [Kế hoạch Base v1.0](PROJECT_PLAN.md) |
-| Xem roadmap và điều kiện phát hành | [Roadmap và G0–G4](ROADMAP.md) |
-| Hiểu nghiệp vụ và tiêu chí nghiệm thu | [Đặc tả MVP](docs/requirements.md) |
-| Tiếp quản thiết kế và hợp đồng API | [Kiến trúc](docs/architecture.md) |
+| Biết mốc đang làm | [Kế hoạch phát triển](PROJECT_PLAN.md) |
+| Xem mốc v2.0 và điều kiện phát hành | [Roadmap sản phẩm](ROADMAP.md) |
+| Hiểu nghiệp vụ hiện có và tiêu chí nghiệm thu | [Đặc tả Base v1.0](docs/requirements.md) |
+| Tiếp quản thiết kế và hợp đồng API hiện tại | [Kiến trúc Base v1.0](docs/architecture.md) |
 | Mở dự án và chuẩn bị môi trường local | [Thiết lập local](docs/setup.md) |
 | Làm ticket, review và merge | [Quy trình đóng góp](CONTRIBUTING.md) |
 | Giao việc cho Codex hoặc agent khác | [Hướng dẫn cho agent](AGENTS.md) |
 
-Trong PowerShell tại thư mục repo, chạy `.\scripts\dev.ps1 -Action Start`, rồi mở [danh mục thiết bị](http://localhost:8000/). Xem [trạng thái xác minh](docs/verification.md) trước khi chốt bản nền.
+Trong PowerShell tại thư mục repo, chạy `.\scripts\dev.ps1 -Action Start`, rồi mở [danh mục thiết bị](http://localhost:8000/). Kết quả kiểm chứng bản nền được lưu theo commit. [Bằng chứng Base v1.0](docs/verification.md)

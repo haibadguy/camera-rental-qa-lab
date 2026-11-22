@@ -110,7 +110,7 @@ python -m coverage report --precision=2 --omit='*/tests.py,*/migrations/*' --fai
 ```
 
 - **Not Run · GitHub Actions.** Workflow đã được chạy theo các bước tương đương trên Compose local. Kết quả trên runner GitHub chờ Hải duyệt push.
-- **Not Run · Manual QA Portfolio.** Giai đoạn này bắt đầu sau khi Hải duyệt và chốt bản Base.
+- **Not Run · Manual QA Portfolio.**
 
 Project cổng 18024 được giữ chạy để xem bản demo. Hai project xác minh trong lượt này ở cổng 18022 và 18023 được dừng, volume của cả hai vẫn tồn tại.
 
