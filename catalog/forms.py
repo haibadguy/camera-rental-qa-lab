@@ -2,9 +2,11 @@ from django import forms
 from django.utils import timezone
 
 from .models import Equipment
+from .services import MAX_RENTAL_DAYS, MAX_RENTAL_QUANTITY, MIN_RENTAL_QUANTITY
 
 
 class PeriodForm(forms.Form):
+    max_rental_days = MAX_RENTAL_DAYS
     pickup_date = forms.DateField(
         label="Ngày nhận",
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
@@ -21,7 +23,10 @@ class PeriodForm(forms.Form):
 
 class BookingForm(PeriodForm):
     quantity = forms.IntegerField(
-        label="Số lượng", min_value=1, max_value=2_147_483_647, initial=1
+        label="Số lượng",
+        min_value=MIN_RENTAL_QUANTITY,
+        max_value=MAX_RENTAL_QUANTITY,
+        initial=MIN_RENTAL_QUANTITY,
     )
 
 
@@ -29,7 +34,10 @@ class CatalogFilterForm(PeriodForm):
     field_order = ["search", "kind", "pickup_date", "return_date"]
 
     search = forms.CharField(
-        label="Tên hoặc mã thiết bị", max_length=100, required=False
+        label="Tên hoặc mã thiết bị",
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Nhập từ khóa"}),
     )
     kind = forms.ChoiceField(
         label="Loại thiết bị",
@@ -48,8 +56,8 @@ class EquipmentForm(forms.ModelForm):
         model = Equipment
         fields = (
             "code",
-            "name",
             "kind",
+            "name",
             "specifications",
             "daily_rate_vnd",
             "total_stock",
@@ -61,8 +69,11 @@ class EquipmentForm(forms.ModelForm):
             "daily_rate_vnd": "Giá thuê mỗi ngày (₫)",
             "total_stock": "Tổng tồn kho",
             "kind": "Loại thiết bị",
-            "specifications": "Thông số thiết bị",
+            "specifications": "Thông số và phụ kiện đi kèm",
             "is_active": "Đang nhận đặt thuê mới",
+        }
+        help_texts = {
+            "specifications": "Ghi rõ thiết bị và phụ kiện thực tế có trong bộ thuê."
         }
         widgets = {"specifications": forms.Textarea(attrs={"rows": 4})}
 

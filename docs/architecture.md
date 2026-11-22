@@ -1,13 +1,34 @@
 # Kiến trúc MVP
 
-Django Templates phục vụ web và Django REST Framework phục vụ API. PostgreSQL lưu dữ liệu và Docker Compose dựng môi trường local. `catalog` chứa model, form, template, API và `services.py` cho nghiệp vụ dùng chung. `config` chứa settings và định tuyến. Xem [hướng dẫn chạy](setup.md).
+Django Templates phục vụ web và Django REST Framework phục vụ API. PostgreSQL lưu dữ liệu và Docker Compose dựng môi trường local. Các module nghiệp vụ chạy trong một Django app `catalog`. Model, app label và migrations tiếp tục thuộc `catalog`. `config` chứa settings và định tuyến. Xem [hướng dẫn chạy](setup.md).
 
 | Thành phần | Trách nhiệm |
 | --- | --- |
 | HTTP UI/API | Xác thực người dùng, đọc input, gọi nghiệp vụ dùng chung và trả kết quả. Web dùng Django auth, API dùng tài khoản Django qua HTTP Basic trên localhost hoặc phiên Django có CSRF. |
-| Nghiệp vụ thuê | Tính số ngày/giá, kiểm tra tồn theo ngày và kiểm soát chuyển trạng thái. Các đường đi ghi tồn/đơn thực hiện qua cùng lớp nghiệp vụ. |
+| Điểm vào nghiệp vụ | `catalog/services.py` cung cấp các hàm chung cho web, API và các lệnh dùng nghiệp vụ. |
 | PostgreSQL | Lưu thiết bị, người dùng và đơn. Sử dụng giao dịch khi tạo đơn, đổi trạng thái hoặc chỉnh tồn. Migrations quản lý thay đổi schema. |
 | Dữ liệu demo và xác minh | Seed lặp được với tài khoản, danh mục và đơn mẫu. `catalog/tests.py` chạy các test Django và PostgreSQL. `scripts/smoke.py` kiểm tra web và API qua HTTP. |
+
+## Module nghiệp vụ
+
+| Phần | Nơi sửa | Trách nhiệm |
+| --- | --- | --- |
+| Tài khoản · R08 | `catalog/views.py`, `config/urls.py` | View đăng ký dùng `UserCreationForm`. Django auth xử lý đăng nhập, đăng xuất và cung cấp thuộc tính `is_staff`. |
+| Danh mục · R01 | `catalog/equipment.py` | Tìm kiếm, lọc, thêm và sửa thiết bị. Giá niêm yết và trạng thái nhận đơn thuộc thiết bị. Khi chỉnh tổng tồn, module hỏi `inventory` về mức tồn tối thiểu sau khi khóa thiết bị. |
+| Tồn kho và kỳ thuê · R02/R05/R07 | `catalog/inventory.py` | Kiểm tra ngày, tính đỉnh giữ lịch, tính lượng đang ở ngoài kho và cung cấp dữ liệu cho màn kho. Form và JS nhận mức tối đa của kỳ thuê từ cùng quy tắc Python. |
+| Đơn thuê · R03/R04/R06/R07 | `catalog/rentals.py` | Đặt đơn, chốt giá, truy vấn đơn của khách, nhóm đơn cho nhân viên và chuyển trạng thái. Màn chi tiết dùng chung quy tắc trạng thái và ngày với các thao tác ghi. Khi bàn giao, giao dịch kiểm tra thêm tồn vật lý. |
+
+Thông tin công khai về điểm nhận, giờ và hỗ trợ lấy từ [cấu hình cửa hàng](setup.md#thông-tin-nhậntrả-cho-khách). Web hiển thị thông tin này trước khi đặt và trên đơn còn hiệu lực.
+
+```text
+Web, API, form và seed → services
+services → equipment, inventory, rentals
+equipment, rentals → inventory
+equipment, inventory, rentals → models, errors
+Đăng ký web → Django auth
+```
+
+`equipment`, `rentals` và `inventory` dùng chung models và `RentalError` từ `catalog/errors.py`. `inventory` đọc dữ liệu qua ORM. Các module thiết bị và đơn thuê sở hữu giao dịch ghi của mình.
 
 ## Mô hình dữ liệu
 

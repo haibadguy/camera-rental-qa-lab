@@ -37,6 +37,22 @@ class CatalogTests(TestCase):
             "LENS",
         )
 
+    def test_invalid_dates_keep_valid_catalog_filters_without_showing_stock(self):
+        call_command("seed_catalog", stdout=StringIO())
+        for dates in (
+            {"pickup_date": "invalid-date", "return_date": timezone.localdate()},
+            {"pickup_date": timezone.localdate()},
+        ):
+            with self.subTest(dates=dates):
+                response = self.client.get(
+                    reverse("equipment-list"),
+                    {"search": "LEN-001", "kind": "LENS"} | dates,
+                )
+                self.assertContains(response, "Sigma 30mm")
+                self.assertNotContains(response, "Sony A6400")
+                self.assertNotContains(response, "Còn theo lịch:")
+                self.assertTrue(response.context["form"].errors)
+
     def test_staff_retires_equipment_through_inventory_form(self):
         staff = get_user_model().objects.create_user("inventory-staff", is_staff=True)
         self.client.force_login(staff)
@@ -129,6 +145,52 @@ class CatalogTests(TestCase):
 
 
 class RegistrationTests(TestCase):
+    def test_registration_returns_customer_to_booking_with_selected_dates(self):
+        equipment = Equipment.objects.create(
+            code="LENS", name="Lens", daily_rate_vnd=150_000, total_stock=1
+        )
+        pickup = timezone.localdate()
+        period = {
+            "pickup_date": pickup.isoformat(),
+            "return_date": (pickup + timedelta(days=2)).isoformat(),
+        }
+        booking = reverse("book", args=[equipment.pk], query=period)
+        login = reverse("login", query={"next": booking})
+        register = reverse("register", query={"next": booking})
+        self.assertRedirects(self.client.get(booking), login)
+        self.assertContains(self.client.get(login), f'href="{register}"', count=2)
+
+        password = "M1-Client-Forest-47"
+        data = {"username": "new-renter", "password1": password, "password2": password}
+        self.assertEqual(
+            self.client.post(register, data | {"password2": "different"}).status_code,
+            400,
+        )
+        self.assertRedirects(self.client.post(register, data), login)
+        self.assertRedirects(
+            self.client.post(login, {"username": "new-renter", "password": password}),
+            booking,
+        )
+        form = self.client.get(booking).context["form"]
+        for field, value in period.items():
+            self.assertEqual(form[field].value(), value)
+        self.assertFalse(Rental.objects.exists())
+
+    def test_registration_ignores_external_redirect_target(self):
+        register = reverse("register", query={"next": "//example.org/booking"})
+        password = "M1-Client-Forest-47"
+        self.assertRedirects(
+            self.client.post(
+                register,
+                {
+                    "username": "local-renter",
+                    "password1": password,
+                    "password2": password,
+                },
+            ),
+            reverse("login"),
+        )
+
     def test_registration_and_login_create_a_customer_without_staff_privileges(self):
         password = "M1-Client-Forest-47"
         data = {
@@ -184,11 +246,14 @@ class RentalFlowTests(TestCase):
         }
         available = self.client.get(detail, period)
         self.assertContains(available, "Còn 2 thiết bị theo lịch đã chọn.")
+        self.assertContains(available, "Thuê từ 1 đến 30 ngày.")
         self.assertContains(
             available, f'{booking}?pickup_date={self.pickup}&amp;return_date={self.dropoff}'
         )
         self.client.force_login(self.customer)
-        form = self.client.get(booking, period | {"quantity": 2}).context["form"]
+        booking_page = self.client.get(booking, period | {"quantity": 2})
+        self.assertContains(booking_page, 'data-max-rental-days="30"')
+        form = booking_page.context["form"]
         self.assertEqual(form["pickup_date"].value(), period["pickup_date"])
         self.assertEqual(form["return_date"].value(), period["return_date"])
         self.assertEqual(form["quantity"].value(), 1)
@@ -201,6 +266,25 @@ class RentalFlowTests(TestCase):
         invalid = self.client.get(detail, period | {"return_date": self.pickup})
         self.assertContains(invalid, "Ngày trả phải sau ngày nhận.")
         self.assertIsNone(invalid.context["availability"])
+
+    def test_catalog_offers_booking_only_for_available_periods(self):
+        catalog = reverse("equipment-list")
+        booking = reverse("book", args=[self.equipment.pk])
+        period = {"pickup_date": self.pickup, "return_date": self.dropoff}
+        filters = {"kind": self.equipment.kind, "search": self.equipment.code}
+
+        self.assertNotContains(self.client.get(catalog, filters), booking)
+        available = self.client.get(catalog, filters | period)
+        self.assertContains(
+            available,
+            f'{booking}?pickup_date={self.pickup}&amp;return_date={self.dropoff}',
+        )
+        self.assertContains(available, "Còn theo lịch: 2")
+
+        services.book_rental(self.other, self.equipment.pk, self.pickup, self.dropoff, 2)
+        sold_out = self.client.get(catalog, filters | period)
+        self.assertContains(sold_out, "Còn theo lịch: 0")
+        self.assertNotContains(sold_out, booking)
 
     def test_web_booking_and_api_cancellation_share_stock_and_prices(self):
         self.client.force_login(self.customer)
@@ -228,6 +312,125 @@ class RentalFlowTests(TestCase):
         self.assertEqual(api.post(cancel).json()["status"], "CANCELLED")
         self.assertEqual(api.post(cancel).status_code, 409)
         self.assertEqual(api.get(listing, period).json()[0]["available_stock"], 2)
+
+    def test_handoff_information_is_shown_before_booking_and_on_active_orders(self):
+        detail = reverse("equipment-detail", args=[self.equipment.pk])
+        booking = reverse("book", args=[self.equipment.pk])
+        with self.settings(RENTAL_STORE={}):
+            self.assertContains(self.client.get(detail), "chưa được công bố")
+        self.client.force_login(self.customer)
+        rental = services.book_rental(
+            self.customer, self.equipment.pk, self.pickup, self.dropoff, 1
+        )
+        order = reverse("rental-detail", args=[rental.pk])
+        store = {
+            "name": "Cửa hàng kiểm thử",
+            "address": "Địa chỉ dùng trong test",
+            "hours": "09:00–18:00",
+            "phone": "0900 000 000",
+            "phone_dial": "0900000000",
+            "support_url": "https://example.com/support",
+            "notes": "Thông tin giao nhận dùng trong test",
+        }
+        with self.settings(RENTAL_STORE=store):
+            for path in (detail, booking, order):
+                with self.subTest(path=path):
+                    response = self.client.get(path)
+                    self.assertContains(response, store["address"])
+                    self.assertContains(response, store["notes"])
+                    self.assertContains(response, 'href="tel:0900000000"')
+                    self.assertNotContains(response, "chưa được công bố")
+            services.cancel_rental(self.customer, rental.pk)
+            self.assertNotContains(self.client.get(order), store["address"])
+
+    def test_web_booking_conflict_keeps_dates_quantity_and_existing_stock(self):
+        existing = services.book_rental(
+            self.other, self.equipment.pk, self.pickup, self.dropoff, 1
+        )
+        self.client.force_login(self.customer)
+        response = self.client.post(
+            reverse("book", args=[self.equipment.pk]),
+            {
+                "pickup_date": self.pickup.isoformat(),
+                "return_date": self.dropoff.isoformat(),
+                "quantity": "2",
+            },
+        )
+        self.assertContains(
+            response, "Không đủ thiết bị cho kỳ thuê đã chọn.", status_code=409
+        )
+        form = response.context["form"]
+        self.assertEqual(form["pickup_date"].value(), self.pickup.isoformat())
+        self.assertEqual(form["return_date"].value(), self.dropoff.isoformat())
+        self.assertEqual(form["quantity"].value(), "2")
+        self.assertEqual(Rental.objects.get().pk, existing.pk)
+        self.assertEqual(
+            services.available_stock(self.equipment, self.pickup, self.dropoff), 1
+        )
+
+    def test_web_and_api_keep_other_customers_orders_private(self):
+        owned = services.book_rental(
+            self.customer, self.equipment.pk, self.pickup, self.dropoff, 1
+        )
+        private = services.book_rental(
+            self.other, self.equipment.pk, self.pickup, self.dropoff, 1
+        )
+        self.client.force_login(self.customer)
+        self.assertQuerySetEqual(
+            self.client.get(reverse("my-rentals")).context["rentals"], [owned]
+        )
+        self.assertEqual(
+            self.client.get(reverse("rental-detail", args=[private.pk])).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.post(reverse("cancel-rental", args=[private.pk])).status_code,
+            404,
+        )
+        api = APIClient()
+        api.force_authenticate(self.customer)
+        response = api.get(reverse("api-rentals"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([rental["id"] for rental in response.json()], [owned.pk])
+        self.assertEqual(
+            api.get(reverse("api-rental-detail", args=[private.pk])).status_code, 404
+        )
+        private.refresh_from_db()
+        self.assertEqual(private.status, Rental.Status.CONFIRMED)
+
+    def test_stock_edit_conflict_does_not_apply_any_fields(self):
+        booked = services.book_rental(
+            self.customer, self.equipment.pk, self.pickup, self.dropoff, 2
+        )
+        edit = reverse("edit-equipment", args=[self.equipment.pk])
+        change = {
+            "code": "CHANGED",
+            "name": "New name",
+            "kind": "LENS",
+            "specifications": "New specs",
+            "daily_rate_vnd": 100_000,
+            "total_stock": 1,
+        }
+        self.client.force_login(self.customer)
+        self.assertEqual(self.client.post(edit, change).status_code, 403)
+        self.client.force_login(self.staff)
+        response = self.client.post(edit, change)
+        self.assertContains(
+            response,
+            "Tổng tồn mới thấp hơn số lượng đã giữ hoặc đang được thuê.",
+            status_code=409,
+        )
+        self.equipment.refresh_from_db()
+        self.assertEqual(self.equipment.code, "CAM-900")
+        self.assertEqual(self.equipment.name, "Camera")
+        self.assertEqual(self.equipment.kind, Equipment.Kind.CAMERA)
+        self.assertEqual(self.equipment.specifications, "")
+        self.assertEqual(self.equipment.daily_rate_vnd, 300_000)
+        self.assertEqual(self.equipment.total_stock, 2)
+        self.assertTrue(self.equipment.is_active)
+        booked.refresh_from_db()
+        self.assertEqual(booked.status, Rental.Status.CONFIRMED)
+        self.assertEqual(booked.total_vnd, 1_200_000)
 
     def test_api_rejects_invalid_dates_invalid_quantity_and_excess_stock(self):
         api = APIClient()
@@ -427,6 +630,9 @@ class RentalFlowTests(TestCase):
         self.assertContains(
             self.client.get(reverse("staff-rentals")), "Quá hạn trả thiết bị"
         )
+        stock_page = self.client.get(reverse("staff-equipment"))
+        stock = stock_page.context["equipment"].get(pk=self.equipment.pk)
+        self.assertEqual((stock.outstanding, stock.available_now), (2, 0))
         api.force_authenticate(self.staff)
         self.assertEqual(api.post(pickup_url).status_code, 409)
         next_rental.refresh_from_db()
@@ -435,6 +641,9 @@ class RentalFlowTests(TestCase):
         result = api.post(reverse("api-return", args=[overdue.pk])).json()
         self.assertEqual(result["status"], "RETURNED")
         self.assertTrue(result["was_returned_late"])
+        stock_page = self.client.get(reverse("staff-equipment"))
+        stock = stock_page.context["equipment"].get(pk=self.equipment.pk)
+        self.assertEqual((stock.outstanding, stock.available_now), (0, 2))
         self.assertEqual(api.post(pickup_url).json()["status"], "PICKED_UP")
 
     def test_stock_cannot_be_reduced_below_outstanding_overdue_quantity(self):
@@ -445,6 +654,33 @@ class RentalFlowTests(TestCase):
             )
         self.equipment.refresh_from_db()
         self.assertEqual(self.equipment.total_stock, 2)
+
+    def test_staff_queues_separate_pickups_due_returns_and_overdue_orders(self):
+        pickup = services.book_rental(
+            self.customer, self.equipment.pk, self.today, self.dropoff, 1
+        )
+        due = self._create_unreturned_rental(days_past_due=0)
+        overdue = self._create_unreturned_rental(days_past_due=1)
+        orders = reverse("staff-rentals")
+
+        self.client.force_login(self.customer)
+        self.assertEqual(self.client.get(orders, {"queue": "overdue"}).status_code, 403)
+        self.client.force_login(self.staff)
+        for queue, rental in (
+            ("pickup-today", pickup),
+            ("return-today", due),
+            ("overdue", overdue),
+        ):
+            with self.subTest(queue=queue):
+                response = self.client.get(orders, {"queue": queue})
+                self.assertQuerySetEqual(response.context["rentals"], [rental])
+                self.assertEqual(response.context["active_queue"], queue)
+
+        services.return_rental(self.staff, due.pk)
+        self.assertContains(
+            self.client.get(orders, {"queue": "return-today"}),
+            "Không có đơn trong mục này.",
+        )
 
     def test_only_staff_can_mark_no_show_at_end_of_pickup_window(self):
         due = Rental.objects.create(

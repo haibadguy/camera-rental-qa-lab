@@ -22,7 +22,24 @@ Trên shell khác, dùng các biến trong `.env.example` để tạo `.env` v�
 
 Danh mục gồm ba mẫu thiết bị. Ngày của đơn demo tính theo giờ Việt Nam ở lần seed đầu. Chạy lại seed vẫn giữ tài khoản, thiết bị và trạng thái đơn đã thay đổi. Đơn cũ chưa từng lưu thời điểm bàn giao sẽ giữ giá trị trống sau migration.
 
-Hình trên danh mục và trang chi tiết là minh họa CSS theo loại thiết bị, dùng chung cho các mẫu cùng loại. Thông số demo dựa trên tài liệu hãng của [Sony A6400](https://www.sony.com/electronics/support/e-mount-body/ilce-6400/specifications), [Canon EOS R50](https://www.usa.canon.com/support/p/eos-r50) và [Sigma 30mm F1.4](https://www.sigma-global.com/en/lenses/c016_30_14/).
+Ảnh WebP trong [thư mục ảnh giao diện](../catalog/static/catalog/images/) được tạo bằng ImageGen. Trang danh mục dùng `editorial.webp`, ảnh người cầm máy cạnh ống kính trên bờ tường bê tông trong ánh nắng cam. Màn đăng nhập dùng `hero.webp`, ảnh máy mirrorless trên đá tối. Ba ảnh minh họa thiết bị `sony.webp`, `canon.webp` và `lens.webp` lần lượt mô phỏng Sony A6400, Canon EOS R50 và Sigma 30mm f/1.4 trong studio. Phông Geist và giấy phép đi kèm nằm trong [thư mục phông chữ](../catalog/static/catalog/fonts/).
+
+Thông số demo dựa trên tài liệu hãng của [Sony A6400](https://www.sony.com/electronics/support/e-mount-body/ilce-6400/specifications), [Canon EOS R50](https://www.usa.canon.com/support/p/eos-r50) và [Sigma 30mm F1.4](https://www.sigma-global.com/en/lenses/c016_30_14/).
+
+## Thông tin nhận–trả cho khách
+
+Điền các giá trị công khai trong `.env`, dựa theo `.env.example`, rồi chạy lại `Start`. Nội dung xuất hiện ở trang thiết bị, form đặt và đơn khách đang có hiệu lực.
+
+| Biến | Nội dung |
+| --- | --- |
+| `RENTAL_STORE_NAME` | Tên cửa hàng hoặc điểm nhận |
+| `RENTAL_PICKUP_ADDRESS` | Địa chỉ nhận và trả |
+| `RENTAL_PICKUP_HOURS` | Khung giờ nhận và trả áp dụng |
+| `RENTAL_SUPPORT_PHONE` | Số điện thoại công khai |
+| `RENTAL_SUPPORT_URL` | Liên kết HTTPS đến kênh hỗ trợ, nếu có |
+| `RENTAL_PICKUP_NOTES` | Hướng dẫn nhận máy và các điều kiện đã được cửa hàng xác nhận |
+
+Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa được công bố. Điền phụ kiện thật của từng mẫu trong mục **Thông số và phụ kiện đi kèm** tại màn sửa thiết bị. Nhân viên có lối lọc đơn nhận hôm nay, trả hôm nay và quá hạn trong **Quản lý đơn thuê**.
 
 ## Kiểm tra và dựng dữ liệu sạch
 

@@ -1,15 +1,15 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import F, Q, Sum
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import urlencode
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import (
     require_http_methods,
     require_POST,
@@ -40,6 +40,13 @@ def register(request):
             form.add_error("username", "Tên đăng nhập đã được sử dụng.")
         else:
             messages.success(request, "Đã tạo tài khoản. Bạn có thể đăng nhập ngay.")
+            next_url = request.GET.get("next", "")
+            if url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return redirect(reverse("login", query={"next": next_url}))
             return redirect("login")
     return render(
         request,
@@ -56,12 +63,12 @@ def register(request):
 @require_safe
 def equipment_list(request):
     form = CatalogFilterForm(request.GET or None)
-    equipment = services.catalog_items()
-    if form.is_valid():
-        filters = form.cleaned_data
-        equipment = list(
-            services.catalog_items(search=filters["search"], kind=filters["kind"])
-        )
+    filters_are_valid = form.is_valid()
+    filters = form.cleaned_data if form.is_bound else {}
+    equipment = services.catalog_items(
+        search=filters.get("search", ""), kind=filters.get("kind", "")
+    )
+    if filters_are_valid:
         pickup, dropoff = filters["pickup_date"], filters["return_date"]
         if pickup and dropoff:
             try:
@@ -101,6 +108,7 @@ def equipment_detail(request, equipment_id):
             "period_form": form,
             "availability": availability,
             "booking_url": booking_url,
+            "rental_store": settings.RENTAL_STORE,
         },
     )
 
@@ -139,6 +147,7 @@ def book(request, equipment_id):
             "form": form,
             "submit_label": "Xác nhận đặt thuê",
             "booking_item": equipment,
+            "rental_store": settings.RENTAL_STORE,
         },
         status=status,
     )
@@ -156,18 +165,16 @@ def my_rentals(request):
 
 
 def _rental_detail(request, rental, *, staff=False, error=None):
-    confirmed = rental.status == Rental.Status.CONFIRMED
     today = timezone.localdate()
     context = {
         "rental": rental,
         "staff_view": staff,
-        "can_cancel": not staff and confirmed and today < rental.pickup_date,
-        "can_pick_up": staff
-        and confirmed
-        and rental.pickup_date <= today < rental.return_date,
-        "can_mark_no_show": staff and confirmed and today > rental.pickup_date,
-        "can_return": staff and rental.status == Rental.Status.PICKED_UP,
+        "can_cancel": not staff and services.can_cancel(rental, today),
+        "can_pick_up": staff and services.can_pick_up(rental, today),
+        "can_mark_no_show": staff and services.can_mark_no_show(rental, today),
+        "can_return": staff and services.can_return(rental),
         "error": error,
+        "rental_store": settings.RENTAL_STORE,
     }
     return render(
         request,
@@ -207,14 +214,19 @@ def cancel(request, rental_id):
 def staff_rentals(request):
     if not request.user.is_staff:
         raise PermissionDenied
-    rentals = Rental.objects.select_related("equipment", "customer")
+    queues = services.StaffRentalQueue
+    queue = request.GET.get("queue", queues.ALL)
+    if queue not in queues.values:
+        queue = queues.ALL
     return render(
         request,
         "catalog/rental_list.html",
         {
-            "rentals": rentals,
+            "rentals": services.staff_rentals(queue),
             "title": "Quản lý đơn thuê",
             "staff_view": True,
+            "queues": queues.choices,
+            "active_queue": queue,
         },
     )
 
@@ -267,18 +279,11 @@ def record_return(request, rental_id):
 def staff_equipment(request):
     if not request.user.is_staff:
         raise PermissionDenied
-    equipment = (
-        Equipment.objects.annotate(
-            outstanding=Sum(
-                "rental__quantity",
-                filter=Q(rental__status=Rental.Status.PICKED_UP),
-                default=0,
-            )
-        )
-        .annotate(available_now=F("total_stock") - F("outstanding"))
-        .order_by("code")
+    return render(
+        request,
+        "catalog/staff_equipment.html",
+        {"equipment": services.equipment_with_physical_stock()},
     )
-    return render(request, "catalog/staff_equipment.html", {"equipment": equipment})
 
 
 @login_required

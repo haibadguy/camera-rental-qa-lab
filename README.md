@@ -6,7 +6,8 @@ Base MVP gồm đăng ký và đăng nhập khách, danh mục, tra cứu theo n
 
 | Bạn cần | Đọc |
 | --- | --- |
-| Biết phạm vi và mốc đang làm | [Kế hoạch Base v1.0](PROJECT_PLAN.md) |
+| Biết mốc đang làm | [Kế hoạch Base v1.0](PROJECT_PLAN.md) |
+| Xem roadmap và điều kiện phát hành | [Roadmap và G0–G4](ROADMAP.md) |
 | Hiểu nghiệp vụ và tiêu chí nghiệm thu | [Đặc tả MVP](docs/requirements.md) |
 | Tiếp quản thiết kế và hợp đồng API | [Kiến trúc](docs/architecture.md) |
 | Mở dự án và chuẩn bị môi trường local | [Thiết lập local](docs/setup.md) |

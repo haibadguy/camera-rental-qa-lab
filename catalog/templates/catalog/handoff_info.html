@@ -1,0 +1,24 @@
+<section class="handoff-info">
+  <h2>Nhận và trả thiết bị</h2>
+  {% if rental_store.name %}<p class="store-name">{{ rental_store.name }}</p>{% endif %}
+  {% if rental_store.address or rental_store.hours %}
+    <dl class="details">
+      {% if rental_store.address %}<div><dt>Địa điểm</dt><dd>{{ rental_store.address }}</dd></div>{% endif %}
+      {% if rental_store.hours %}<div><dt>Giờ nhận–trả</dt><dd>{{ rental_store.hours }}</dd></div>{% endif %}
+    </dl>
+  {% endif %}
+  {% if not rental_store.address or not rental_store.hours %}
+    <p class="muted">
+      {% if not rental_store.address and not rental_store.hours %}Địa điểm và giờ nhận–trả chưa được công bố.
+      {% elif not rental_store.address %}Địa điểm nhận–trả chưa được công bố.
+      {% else %}Giờ nhận–trả chưa được công bố.{% endif %}
+    </p>
+  {% endif %}
+  {% if rental_store.notes %}<p class="handoff-notes">{{ rental_store.notes }}</p>{% endif %}
+  {% if rental_store.phone or rental_store.support_url %}
+    <div class="handoff-links">
+      {% if rental_store.phone %}<a href="tel:{{ rental_store.phone_dial }}">Gọi {{ rental_store.phone }}</a>{% endif %}
+      {% if rental_store.support_url %}<a href="{{ rental_store.support_url }}">Liên hệ cửa hàng</a>{% endif %}
+    </div>
+  {% endif %}
+</section>

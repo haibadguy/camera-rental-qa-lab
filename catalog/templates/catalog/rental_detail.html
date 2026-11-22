@@ -1,46 +1,51 @@
 {% extends "catalog/base.html" %}
 {% load pricing %}
-{% block title %}Đơn #{{ rental.pk }} | Camera Rental QA Lab{% endblock %}
+{% block title %}Đơn #{{ rental.pk }} | Camera Rental{% endblock %}
 {% block content %}
-  <h1>Đơn #{{ rental.pk }}</h1>
+  <nav class="breadcrumb" aria-label="Đường dẫn">
+    {% if staff_view %}<a href="{% url 'staff-rentals' %}">Quản lý đơn thuê</a>{% else %}<a href="{% url 'my-rentals' %}">Đơn của tôi</a>{% endif %}
+    <span aria-hidden="true">/</span><span aria-current="page">Đơn #{{ rental.pk }}</span>
+  </nav>
+  <div class="page-heading">
+    <h1>Đơn #{{ rental.pk }}</h1>
+    <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+  </div>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   {% if rental.is_overdue %}<p class="notice notice-warning" role="alert">Đơn đã quá hạn trả thiết bị.</p>{% endif %}
   {% if rental.was_returned_late %}<p class="notice notice-warning">Thiết bị đã được trả sau ngày hẹn.</p>{% endif %}
-  <div class="panel order-panel">
-    <dl class="details">
-      {% if staff_view %}<dt>Khách thuê</dt><dd>{{ rental.customer.username }}</dd>{% endif %}
-      <dt>Thiết bị</dt><dd>{{ rental.equipment }}</dd>
-      <dt>Ngày nhận</dt><dd>{{ rental.pickup_date|date:'d/m/Y' }}</dd>
-      <dt>Ngày trả theo lịch</dt><dd>{{ rental.return_date|date:'d/m/Y' }}</dd>
-      <dt>Số lượng</dt><dd>{{ rental.quantity }}</dd>
-      <dt>Giá lúc đặt</dt><dd>{{ rental.daily_rate_vnd|vnd }}/ngày</dd>
-      <dt>Tổng tiền</dt><dd>{{ rental.total_vnd|vnd }}</dd>
-      <dt>Trạng thái</dt><dd>{{ rental.get_status_display }}</dd>
-      {% if rental.cancellation_reason %}<dt>Lý do hủy</dt><dd>{{ rental.get_cancellation_reason_display }}</dd>{% endif %}
-      {% if rental.picked_up_at %}<dt>Thời điểm bàn giao</dt><dd>{{ rental.picked_up_at|date:'d/m/Y H:i' }}</dd>{% endif %}
-      {% if rental.returned_at %}<dt>Thời điểm trả</dt><dd>{{ rental.returned_at|date:'d/m/Y H:i' }}</dd>{% endif %}
-    </dl>
-    <div class="actions">
-    {% if can_cancel %}
-      <form method="post" action="{% url 'cancel-rental' rental.pk %}">
-        {% csrf_token %}<button>Hủy đơn</button>
-      </form>
-    {% endif %}
-    {% if can_pick_up %}
-      <form method="post" action="{% url 'pick-up-rental' rental.pk %}">
-        {% csrf_token %}<button>Ghi nhận bàn giao</button>
-      </form>
-    {% endif %}
-    {% if can_mark_no_show %}
-      <form method="post" action="{% url 'no-show-rental' rental.pk %}">
-        {% csrf_token %}<button>Hủy vì khách không đến nhận</button>
-      </form>
-    {% endif %}
-    {% if can_return %}
-      <form method="post" action="{% url 'return-rental' rental.pk %}">
-        {% csrf_token %}<button>Ghi nhận trả</button>
-      </form>
-    {% endif %}
-    </div>
+  <div class="order-layout">
+    <section class="panel order-panel" aria-labelledby="order-heading">
+      <p class="code">{{ rental.equipment.get_kind_display }} / {{ rental.equipment.code }}</p>
+      <h2 id="order-heading">{{ rental.equipment.name }}</h2>
+      <dl class="details order-details">
+        {% if staff_view %}<div><dt>Khách thuê</dt><dd>{{ rental.customer.username }}</dd></div>{% endif %}
+        <div><dt>Ngày nhận</dt><dd>{{ rental.pickup_date|date:'d/m/Y' }}</dd></div>
+        <div><dt>Ngày trả theo lịch</dt><dd>{{ rental.return_date|date:'d/m/Y' }}</dd></div>
+        <div><dt>Số lượng</dt><dd>{{ rental.quantity }}</dd></div>
+        {% if rental.cancellation_reason %}<div><dt>Lý do hủy</dt><dd>{{ rental.get_cancellation_reason_display }}</dd></div>{% endif %}
+        {% if rental.picked_up_at %}<div><dt>Thời điểm bàn giao</dt><dd>{{ rental.picked_up_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
+        {% if rental.returned_at %}<div><dt>Thời điểm trả</dt><dd>{{ rental.returned_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
+      </dl>
+      {% if not staff_view %}
+        {% if rental.status == 'CONFIRMED' or rental.status == 'PICKED_UP' %}
+          {% include "catalog/handoff_info.html" %}
+        {% endif %}
+      {% endif %}
+      {% if can_cancel or can_pick_up or can_mark_no_show or can_return %}
+        <div class="actions">
+          {% if can_cancel %}<form method="post" action="{% url 'cancel-rental' rental.pk %}">{% csrf_token %}<button class="button-danger">Hủy đơn</button></form>{% endif %}
+          {% if can_pick_up %}<form method="post" action="{% url 'pick-up-rental' rental.pk %}">{% csrf_token %}<button>Ghi nhận bàn giao</button></form>{% endif %}
+          {% if can_mark_no_show %}<form method="post" action="{% url 'no-show-rental' rental.pk %}">{% csrf_token %}<button class="button-danger">Hủy vì khách không đến nhận</button></form>{% endif %}
+          {% if can_return %}<form method="post" action="{% url 'return-rental' rental.pk %}">{% csrf_token %}<button>Ghi nhận trả</button></form>{% endif %}
+        </div>
+      {% endif %}
+    </section>
+    <aside class="panel order-summary" aria-labelledby="payment-heading">
+      <h2 id="payment-heading">Chi phí thuê</h2>
+      <dl class="details">
+        <div><dt>Giá lúc đặt</dt><dd>{{ rental.daily_rate_vnd|vnd }}/ngày</dd></div>
+        <div class="order-total"><dt>Tổng tiền</dt><dd>{{ rental.total_vnd|vnd }}</dd></div>
+      </dl>
+    </aside>
   </div>
 {% endblock %}

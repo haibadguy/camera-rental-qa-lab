@@ -1,4 +1,6 @@
 import os
+from urllib.parse import urlsplit
+
 from django.core.exceptions import ImproperlyConfigured
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
@@ -23,6 +25,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -53,6 +56,26 @@ TIME_ZONE = "Asia/Ho_Chi_Minh"
 USE_TZ = True
 STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+support_phone = os.environ.get("RENTAL_SUPPORT_PHONE", "").strip()
+support_url = os.environ.get("RENTAL_SUPPORT_URL", "").strip()
+try:
+    parsed_support_url = urlsplit(support_url)
+    if parsed_support_url.scheme != "https" or not parsed_support_url.hostname:
+        support_url = ""
+except ValueError:
+    support_url = ""
+
+RENTAL_STORE = {
+    "name": os.environ.get("RENTAL_STORE_NAME", "").strip(),
+    "address": os.environ.get("RENTAL_PICKUP_ADDRESS", "").strip(),
+    "hours": os.environ.get("RENTAL_PICKUP_HOURS", "").strip(),
+    "phone": support_phone,
+    "phone_dial": support_phone.translate(str.maketrans("", "", " .()-")),
+    "support_url": support_url,
+    "notes": os.environ.get("RENTAL_PICKUP_NOTES", "").strip(),
+}
+
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "equipment-list"
 LOGOUT_REDIRECT_URL = "equipment-list"

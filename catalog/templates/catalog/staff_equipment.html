@@ -2,21 +2,31 @@
 {% load pricing %}
 {% block title %}Kho thiết bị | Camera Rental{% endblock %}
 {% block content %}
-  <div class="heading-row"><h1>Kho thiết bị</h1><a class="button" href="{% url 'new-equipment' %}">Thêm thiết bị</a></div>
-  <ul class="cards">
+  <div class="page-heading">
+    <h1>Kho thiết bị</h1>
+    <a class="button" href="{% url 'new-equipment' %}">Thêm thiết bị <span aria-hidden="true">+</span></a>
+  </div>
+  <ul class="workspace-rows">
     {% for item in equipment %}
-      <li class="panel">
-        <p class="code">{{ item.get_kind_display }} · {{ item.code }}</p>
-        <h2>{{ item.name }}</h2>
-        <p class="muted">{% if item.is_active %}Đang nhận đặt thuê{% else %}Đã ngừng nhận đặt thuê{% endif %}</p>
-        <dl class="details">
-          <dt>Tổng tồn</dt><dd>{{ item.total_stock }}</dd>
-          <dt>Đang ở ngoài kho</dt><dd>{{ item.outstanding }}</dd>
-          <dt>Có thực tế trong kho</dt><dd>{{ item.available_now }}</dd>
-          <dt>Giá thuê</dt><dd>{{ item.daily_rate_vnd|vnd }}/ngày</dd>
+      <li class="panel workspace-row inventory-row">
+        <div class="inventory-identity">
+          {% include "catalog/equipment_art.html" %}
+          <div class="row-identity">
+            <p class="code">{{ item.get_kind_display }} / {{ item.code }}</p>
+            <h2>{{ item.name }}</h2>
+            <span class="status {% if item.is_active %}status-confirmed{% else %}status-cancelled{% endif %}">{% if item.is_active %}Đang nhận đặt thuê{% else %}Đã ngừng nhận đặt thuê{% endif %}</span>
+          </div>
+        </div>
+        <dl class="inventory-metrics">
+          <div><dt>Tổng tồn</dt><dd>{{ item.total_stock }}</dd></div>
+          <div><dt>Đang ở ngoài kho</dt><dd>{{ item.outstanding }}</dd></div>
+          <div><dt>Có thực tế trong kho</dt><dd>{{ item.available_now }}</dd></div>
+          <div><dt>Giá thuê</dt><dd>{{ item.daily_rate_vnd|vnd }}<span class="price-unit">/ngày</span></dd></div>
         </dl>
-        <a href="{% url 'edit-equipment' item.pk %}">Sửa thiết bị</a>
+        <a class="button button-outline button-small" href="{% url 'edit-equipment' item.pk %}">Sửa thiết bị <span aria-hidden="true">↗</span></a>
       </li>
-    {% empty %}<li class="panel">Chưa có thiết bị.</li>{% endfor %}
+    {% empty %}
+      <li class="panel empty-state">Chưa có thiết bị.</li>
+    {% endfor %}
   </ul>
 {% endblock %}

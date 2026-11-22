@@ -18,7 +18,10 @@ class BookingSerializer(PeriodSerializer):
     equipment_id = serializers.IntegerField(
         min_value=1, max_value=9_223_372_036_854_775_807
     )
-    quantity = serializers.IntegerField(min_value=1, max_value=2_147_483_647)
+    quantity = serializers.IntegerField(
+        min_value=services.MIN_RENTAL_QUANTITY,
+        max_value=services.MAX_RENTAL_QUANTITY,
+    )
 
 
 class CatalogQuerySerializer(serializers.Serializer):

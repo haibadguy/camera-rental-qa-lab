@@ -1,34 +1,89 @@
 {% extends "catalog/base.html" %}
-{% load pricing %}
+{% load pricing static %}
 {% block title %}Danh mục thiết bị | Camera Rental{% endblock %}
+{% block main_class %}catalog-main{% endblock %}
 {% block content %}
-  <section class="hero">
-    <h1>Thuê máy ảnh và ống kính</h1>
-    <p>Tìm thiết bị, chọn kỳ thuê và xem số lượng còn trống theo lịch.</p>
+  {% if not request.GET %}
+    <section class="hero">
+      <div class="hero-content">
+        <h1>Thuê máy ảnh<br>và ống kính<span class="hero-period">.</span></h1>
+        <p>Tìm thiết bị theo ngày bạn cần, xem giá thuê và đặt trực tuyến.</p>
+        <a class="button button-bright" href="#thiet-bi">Khám phá thiết bị <span aria-hidden="true">↓</span></a>
+      </div>
+      <figure class="hero-visual">
+        <img class="hero-image" src="{% static 'catalog/images/editorial.webp' %}" alt="" fetchpriority="high" width="1280" height="853">
+      </figure>
+    </section>
+  {% endif %}
+
+  <section id="thiet-bi" class="catalog-section" aria-labelledby="catalog-heading">
+    <div class="section-heading">
+      {% if request.GET %}
+        <h1 id="catalog-heading">Danh mục thiết bị</h1>
+      {% else %}
+        <h2 id="catalog-heading">Danh mục thiết bị</h2>
+      {% endif %}
+      <p class="result-count">{{ equipment|length }} thiết bị</p>
+    </div>
+
+    <div class="catalog-workspace">
+      <details class="catalog-filters panel" id="bo-loc" data-catalog-filters{% if request.GET.search or request.GET.pickup_date or request.GET.return_date or form.errors %} data-filters-active{% endif %} open>
+        <summary>Bộ lọc</summary>
+        <form method="get" action="{% url 'equipment-list' %}#thiet-bi" class="filters" aria-label="Lọc thiết bị và tra cứu tồn kho">
+          <h3>Bộ lọc</h3>
+          {{ form.kind.as_hidden }}
+          {{ form.kind.errors }}
+          <div class="filter-field">
+            {{ form.search.label_tag }}{{ form.search }}{{ form.search.errors }}
+          </div>
+          <fieldset class="filter-dates">
+            <legend>Kỳ thuê</legend>
+            <div class="filter-field">{{ form.pickup_date.label_tag }}{{ form.pickup_date }}{{ form.pickup_date.errors }}</div>
+            <div class="filter-field">{{ form.return_date.label_tag }}{{ form.return_date }}{{ form.return_date.errors }}</div>
+          </fieldset>
+          {{ form.non_field_errors }}
+          <button>Áp dụng <span aria-hidden="true">↗</span></button>
+          {% if request.GET %}<a class="text-link" href="{% url 'equipment-list' %}#thiet-bi">Xóa bộ lọc</a>{% endif %}
+        </form>
+      </details>
+
+      <div class="catalog-results">
+        <nav class="kind-tabs" aria-label="Loại thiết bị">
+          {% for value, label in form.fields.kind.choices %}
+            <a href="{% url 'equipment-list' %}{% if value %}{% querystring kind=value %}{% else %}{% querystring kind=None %}{% endif %}#thiet-bi" data-catalog-kind="{{ value }}"{% if form.kind.value|default_if_none:'' == value %} aria-current="true"{% endif %}>{% if value %}{{ label }}{% else %}Tất cả{% endif %}</a>
+          {% endfor %}
+        </nav>
+        {% if form.cleaned_data.pickup_date and form.cleaned_data.return_date and not form.errors %}
+          <p class="selected-period">Kỳ đã chọn <strong>{{ form.cleaned_data.pickup_date|date:'d/m/Y' }} <span aria-hidden="true">→</span> {{ form.cleaned_data.return_date|date:'d/m/Y' }}</strong></p>
+        {% endif %}
+
+        <ul class="cards catalog-cards">
+          {% for item in equipment %}
+            <li class="card product-card{% if item.available_stock %} has-quick-book{% endif %}">
+              {% include "catalog/equipment_art.html" %}
+              <div class="card-body">
+                <p class="code">{{ item.get_kind_display }} <span aria-hidden="true">/</span> {{ item.code }}</p>
+                <h3><a class="product-link" href="{% url 'equipment-detail' item.pk %}{% if item.available_stock != None %}?pickup_date={{ form.cleaned_data.pickup_date|date:'Y-m-d' }}&amp;return_date={{ form.cleaned_data.return_date|date:'Y-m-d' }}{% endif %}">{{ item.name }}</a></h3>
+                {% if item.specifications %}<p class="product-description">{{ item.specifications.splitlines|first|truncatewords:12 }}</p>{% endif %}
+                {% if item.available_stock != None %}<p class="stock-caption {% if not item.available_stock %}stock-empty{% endif %}">Còn theo lịch: {{ item.available_stock }}</p>{% endif %}
+                <div class="product-card-bottom">
+                  <p class="price">{{ item.daily_rate_vnd|vnd }}/ngày</p>
+                  {% if item.available_stock %}
+                    <a class="quick-book" href="{% url 'book' item.pk %}?pickup_date={{ form.cleaned_data.pickup_date|date:'Y-m-d' }}&amp;return_date={{ form.cleaned_data.return_date|date:'Y-m-d' }}" aria-label="Đặt thuê {{ item.name }}">Đặt thuê <span aria-hidden="true">↗</span></a>
+                  {% else %}
+                    <span class="card-arrow" aria-hidden="true">↗</span>
+                  {% endif %}
+                </div>
+              </div>
+            </li>
+          {% empty %}
+            <li class="panel empty-state">
+              {% if request.GET %}<p>Không tìm thấy thiết bị phù hợp.</p><a class="text-link" href="{% url 'equipment-list' %}#thiet-bi">Xem toàn bộ thiết bị</a>
+              {% else %}Chưa có thiết bị trong danh mục.{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
   </section>
-  <form method="get" class="panel filters" aria-label="Lọc thiết bị và tra cứu tồn kho">
-    {% for field in form %}
-      <div>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
-    {% endfor %}
-    <button>Lọc thiết bị</button>
-    {% if request.GET %}<a href="{% url 'equipment-list' %}">Xóa bộ lọc</a>{% endif %}
-    {% if form.non_field_errors %}<div class="filter-error">{{ form.non_field_errors }}</div>{% endif %}
-  </form>
-  <h2 class="section-title">Danh mục thiết bị</h2>
-  <ul class="cards">
-    {% for item in equipment %}
-      <li class="card">
-        {% include "catalog/equipment_art.html" %}
-        <div class="card-body">
-          <p class="code">{{ item.get_kind_display }} · {{ item.code }}</p>
-          <h3><a href="{% url 'equipment-detail' item.pk %}{% if item.available_stock != None %}?pickup_date={{ form.cleaned_data.pickup_date|date:'Y-m-d' }}&amp;return_date={{ form.cleaned_data.return_date|date:'Y-m-d' }}{% endif %}">{{ item.name }}</a></h3>
-          {% if item.specifications %}<p class="muted">{{ item.specifications|truncatewords:12 }}</p>{% endif %}
-          <p class="price">{{ item.daily_rate_vnd|vnd }}/ngày</p>
-          {% if item.available_stock != None %}<p class="muted">Còn theo lịch: {{ item.available_stock }}</p>{% endif %}
-        </div>
-      </li>
-    {% empty %}
-      <li class="panel">{% if request.GET %}Không tìm thấy thiết bị phù hợp.{% else %}Chưa có thiết bị trong danh mục.{% endif %}</li>
-    {% endfor %}
-  </ul>
 {% endblock %}
