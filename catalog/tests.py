@@ -6,6 +6,7 @@ from threading import Barrier
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.db import connection, connections
+from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase, skipUnlessDBFeature
 from django.urls import reverse
 from django.utils import timezone
@@ -797,3 +798,76 @@ class ConcurrentBookingTests(TransactionTestCase):
         self.assertEqual(
             Rental.objects.filter(status=Rental.Status.PICKED_UP).count(), 2
         )
+
+
+class LegacyRentalMigrationTests(TransactionTestCase):
+    def test_upgrade_from_0002_preserves_rental_history(self):
+        old_schema = [("catalog", "0002_rental")]
+        upgraded_schema = [("catalog", "0004_equipment_catalog")]
+        executor = MigrationExecutor(connection)
+        current_schema = executor.loader.graph.leaf_nodes()
+        try:
+            executor.migrate(old_schema)
+            models_before = executor.loader.project_state(old_schema).apps
+            user = models_before.get_model("auth", "User").objects.create(
+                username="legacy-customer"
+            )
+            legacy_equipment = models_before.get_model("catalog", "Equipment")
+            equipment = legacy_equipment.objects.create(
+                code="LEN-LEGACY",
+                name="Legacy lens",
+                daily_rate_vnd=200_000,
+                total_stock=2,
+            )
+            rentals_before = models_before.get_model("catalog", "Rental").objects
+            pickup = timezone.localdate() - timedelta(days=4)
+            returned_at = timezone.now() - timedelta(days=2)
+            for status in ("CONFIRMED", "CANCELLED", "RETURNED"):
+                rentals_before.create(
+                    customer_id=user.pk,
+                    equipment_id=equipment.pk,
+                    pickup_date=pickup,
+                    return_date=pickup + timedelta(days=2),
+                    quantity=2,
+                    daily_rate_vnd=150_000,
+                    total_vnd=600_000,
+                    status=status,
+                    returned_at=returned_at if status == "RETURNED" else None,
+                )
+            historical_fields = (
+                "id",
+                "equipment_id",
+                "customer_id",
+                "pickup_date",
+                "return_date",
+                "quantity",
+                "daily_rate_vnd",
+                "total_vnd",
+                "status",
+                "returned_at",
+            )
+            history = list(rentals_before.order_by("pk").values_list(*historical_fields))
+
+            executor = MigrationExecutor(connection)
+            executor.migrate(upgraded_schema)
+            models_after = executor.loader.project_state(upgraded_schema).apps
+            rentals_after = models_after.get_model("catalog", "Rental").objects
+            self.assertEqual(
+                list(rentals_after.order_by("pk").values_list(*historical_fields)),
+                history,
+            )
+            self.assertEqual(
+                list(
+                    rentals_after.order_by("pk").values_list(
+                        "picked_up_at", "cancellation_reason"
+                    )
+                ),
+                [(None, "")] * len(history),
+            )
+            lens = models_after.get_model("catalog", "Equipment").objects.get(
+                pk=equipment.pk
+            )
+            self.assertEqual(lens.kind, "LENS")
+            self.assertTrue(lens.is_active)
+        finally:
+            MigrationExecutor(connection).migrate(current_schema)
