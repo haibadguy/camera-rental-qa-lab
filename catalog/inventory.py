@@ -1,11 +1,21 @@
 from collections import defaultdict
 
-from django.db.models import F, Q, Sum
+from django.db.models import (
+    Case,
+    Count,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    When,
+)
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .errors import RentalError
-from .models import Equipment, Rental
-
+from .models import AssetReservation, AssetUnit, Equipment, Rental
 
 MAX_RENTAL_DAYS = 30
 
@@ -53,22 +63,14 @@ def _remaining_stock(equipment, reservations, pickup_date, return_date):
 
 
 def available_stock(equipment, pickup_date, return_date):
-    validate_period(pickup_date, return_date)
-    reservations = _scheduled_reservations(pickup_date, return_date).filter(
-        equipment=equipment
-    )
-    return _remaining_stock(
-        equipment,
-        reservations.values_list("pickup_date", "return_date", "quantity"),
-        pickup_date,
-        return_date,
-    )
+    return catalog_availability([equipment], pickup_date, return_date)[equipment.pk]
 
 
 def catalog_availability(equipment, pickup_date, return_date):
     validate_period(pickup_date, return_date)
+    equipment = list(equipment)
     reservations = _scheduled_reservations(pickup_date, return_date).filter(
-        equipment_id__in=[item.pk for item in equipment],
+        equipment_id__in=[item.pk for item in equipment if not item.tracks_assets],
     )
     windows = defaultdict(list)
     for equipment_id, pickup, dropoff, quantity in reservations.values_list(
@@ -78,8 +80,16 @@ def catalog_availability(equipment, pickup_date, return_date):
         "quantity",
     ):
         windows[equipment_id].append((pickup, dropoff, quantity))
+    counts = defaultdict(int)
+    tracked_ids = [item.pk for item in equipment if item.tracks_assets]
+    if tracked_ids:
+        available = free_assets(tracked_ids, pickup_date, return_date)
+        for equipment_id in available.values_list("equipment_id", flat=True):
+            counts[equipment_id] += 1
     return {
-        item.pk: _remaining_stock(item, windows[item.pk], pickup_date, return_date)
+        item.pk: counts[item.pk]
+        if item.tracks_assets
+        else _remaining_stock(item, windows[item.pk], pickup_date, return_date)
         for item in equipment
     }
 
@@ -89,19 +99,39 @@ def _checked_out_filter(status_field):
 
 
 def checked_out_quantity(equipment):
+    if equipment.tracks_assets:
+        return checked_out_assets().filter(asset__equipment=equipment).count()
     return Rental.objects.filter(
         _checked_out_filter("status"), equipment=equipment
     ).aggregate(quantity=Sum("quantity", default=0))["quantity"]
 
 
 def equipment_with_physical_stock():
+    asset_counts = (
+        checked_out_assets()
+        .filter(asset__equipment_id=OuterRef("pk"))
+        .order_by()
+        .values("asset__equipment_id")
+        .annotate(count=Count("pk"))
+        .values("count")
+    )
+    legacy_counts = (
+        Rental.objects.filter(_checked_out_filter("status"), equipment_id=OuterRef("pk"))
+        .order_by()
+        .values("equipment_id")
+        .annotate(count=Sum("quantity"))
+        .values("count")
+    )
     return (
         Equipment.objects.annotate(
-            outstanding=Sum(
-                "rental__quantity",
-                filter=_checked_out_filter("rental__status"),
-                default=0,
-            )
+            outstanding=Coalesce(
+                Case(
+                    When(tracks_assets=True, then=Subquery(asset_counts)),
+                    default=Subquery(legacy_counts),
+                    output_field=IntegerField(),
+                ),
+                0,
+            ),
         )
         .annotate(available_now=F("total_stock") - F("outstanding"))
         .order_by("code")
@@ -114,3 +144,56 @@ def minimum_stock(equipment, today):
         reservations.values_list("pickup_date", "return_date", "quantity"), today
     )
     return max(peak_reserved, checked_out_quantity(equipment))
+
+
+def checked_out_assets():
+    return AssetReservation.objects.filter(
+        released_at__isnull=True, line__rental__status=Rental.Status.PICKED_UP
+    )
+
+
+def free_assets(equipment_ids, pickup_date, return_date):
+    conflicts = AssetReservation.objects.filter(
+        released_at__isnull=True, period__overlap=(pickup_date, return_date)
+    )
+    overdue = checked_out_assets().filter(
+        line__rental__return_date__lte=timezone.localdate()
+    )
+    return (
+        AssetUnit.objects.filter(equipment_id__in=equipment_ids)
+        .exclude(pk__in=conflicts.values("asset_id"))
+        .exclude(pk__in=overdue.values("asset_id"))
+    )
+
+
+def unassigned_legacy_rentals(equipment):
+    return (
+        Rental.objects.filter(equipment=equipment)
+        .filter(
+            Q(status__in=(Rental.Status.CONFIRMED, Rental.Status.PICKED_UP))
+            | Q(status=Rental.Status.RETURNED, return_date__gt=timezone.localdate())
+        )
+        .annotate(
+            assigned=Count(
+                "lines__reservations",
+                filter=Q(lines__reservations__released_at__isnull=True),
+            )
+        )
+        .exclude(assigned=F("quantity"))
+    )
+
+
+def asset_calendar(equipment):
+    return (
+        AssetReservation.objects.filter(asset__equipment=equipment)
+        .select_related("asset", "line__rental", "changed_by", "replaces__asset")
+        .order_by("-period", "asset__code")
+    )
+
+
+def rental_asset_history(rental):
+    return (
+        AssetReservation.objects.filter(line__rental=rental)
+        .select_related("asset", "changed_by", "replaces__asset")
+        .order_by("line_id", "id")
+    )

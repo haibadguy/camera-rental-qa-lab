@@ -19,7 +19,7 @@
         <div class="row-identity">
           <p class="code">Đơn #{{ rental.pk }}</p>
           <h2>
-            <a class="row-link" href="{% if staff_view %}{% url 'staff-rental-detail' rental.pk %}{% else %}{% url 'rental-detail' rental.pk %}{% endif %}">{{ rental.equipment.name }}</a>
+            <a class="row-link" href="{% if staff_view %}{% url 'staff-rental-detail' rental.pk %}{% else %}{% url 'rental-detail' rental.pk %}{% endif %}">{% if rental.equipment_id %}{{ rental.equipment.name }}{% else %}{{ rental.lines.all|length }} mẫu thiết bị{% endif %}</a>
           </h2>
           {% if staff_view %}<p class="muted">Khách {{ rental.customer.username }}</p>{% endif %}
         </div>

@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,8 +18,15 @@ from django.views.decorators.http import (
 )
 
 from . import services
-from .forms import BookingForm, CatalogFilterForm, EquipmentForm, PeriodForm
-from .models import Equipment, Rental
+from .forms import (
+    AssetForm,
+    BookingForm,
+    CatalogFilterForm,
+    EquipmentForm,
+    OrderForm,
+    PeriodForm,
+)
+from .models import AssetReservation, Equipment, Rental
 
 
 @require_http_methods(["GET", "POST"])
@@ -156,7 +164,9 @@ def book(request, equipment_id):
 @login_required
 @require_safe
 def my_rentals(request):
-    rentals = services.customer_rentals(request.user)
+    rentals = services.customer_rentals(request.user).prefetch_related(
+        "lines__equipment"
+    )
     return render(
         request,
         "catalog/rental_list.html",
@@ -173,14 +183,63 @@ def _rental_detail(request, rental, *, staff=False, error=None):
         "can_pick_up": staff and services.can_pick_up(rental, today),
         "can_mark_no_show": staff and services.can_mark_no_show(rental, today),
         "can_return": staff and services.can_return(rental),
+        "can_replace_asset": staff and services.can_replace_asset(rental, today),
         "error": error,
         "rental_store": settings.RENTAL_STORE,
     }
+    if staff:
+        context["asset_history"] = services.rental_asset_history(rental)
     return render(
         request,
         "catalog/rental_detail.html",
         context,
         status=error.status if error else 200,
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def book_order(request):
+    equipment = list(services.catalog_items().filter(tracks_assets=True))
+    initial = {
+        key: request.GET[key] for key in PeriodForm.base_fields if key in request.GET
+    }
+    for item in equipment:
+        if request.GET.get("equipment") == str(item.pk):
+            initial[f"quantity_{item.pk}"] = 1
+    form = OrderForm(
+        request.POST if request.method == "POST" else None,
+        equipment=equipment,
+        initial=initial,
+    )
+    status = 200
+    if request.method == "POST":
+        status = 400
+        if form.is_valid():
+            try:
+                rental = services.book_order(
+                    request.user,
+                    form.cleaned_data["pickup_date"],
+                    form.cleaned_data["return_date"],
+                    form.cleaned_data["lines"],
+                )
+            except Equipment.DoesNotExist:
+                form.add_error(None, "Danh mục đã thay đổi. Chọn lại thiết bị.")
+                status = 409
+            except services.RentalError as error:
+                form.add_error(None, str(error))
+                status = error.status
+            else:
+                messages.success(request, "Đặt thuê thành công.")
+                return redirect("rental-detail", rental_id=rental.pk)
+    return render(
+        request,
+        "catalog/book_order.html",
+        {
+            "form": form,
+            "rental_store": settings.RENTAL_STORE,
+        },
+        status=status,
     )
 
 
@@ -272,6 +331,71 @@ def no_show(request, rental_id):
 @require_POST
 def record_return(request, rental_id):
     return _staff_rental_action(request, rental_id, services.return_rental)
+
+
+@login_required
+@require_POST
+def replace_asset(request, rental_id, reservation_id):
+    if not request.user.is_staff:
+        raise PermissionDenied
+    code = request.POST.get("replacement_code", "").strip()
+    try:
+        if not code or len(code) > 48:
+            raise services.RentalError("Nhập mã kho hợp lệ.")
+        services.replace_reserved_asset(request.user, rental_id, reservation_id, code)
+    except (Rental.DoesNotExist, AssetReservation.DoesNotExist) as error:
+        raise Http404 from error
+    except services.RentalError as error:
+        rental = get_object_or_404(Rental, pk=rental_id)
+        return _rental_detail(request, rental, staff=True, error=error)
+    messages.success(request, "Đã đổi thiết bị giữ cho đơn.")
+    return redirect("staff-rental-detail", rental_id=rental_id)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def staff_assets(request, equipment_id):
+    if not request.user.is_staff:
+        raise PermissionDenied
+    equipment = get_object_or_404(Equipment, pk=equipment_id)
+    enabling = request.POST.get("action") == "enable"
+    form = AssetForm(
+        request.POST if request.method == "POST" and not enabling else None
+    )
+    status = 200
+    activation_error = None
+    if request.method == "POST":
+        status = 400
+        try:
+            if enabling:
+                services.enable_asset_tracking(request.user, equipment.pk)
+                messages.success(request, "Đã bật giữ theo mã kho.")
+                return redirect("staff-assets", equipment_id=equipment.pk)
+            if form.is_valid():
+                services.register_asset(request.user, equipment.pk, **form.cleaned_data)
+                messages.success(request, "Đã đăng ký thiết bị vật lý.")
+                return redirect("staff-assets", equipment_id=equipment.pk)
+        except services.RentalError as error:
+            if enabling:
+                activation_error = str(error)
+            else:
+                form.add_error(None, str(error))
+            status = error.status
+    return render(
+        request,
+        "catalog/staff_assets.html",
+        {
+            "equipment": equipment,
+            "form": form,
+            "assets": equipment.assets.all(),
+            "calendar": Paginator(services.asset_calendar(equipment), 30).get_page(
+                request.GET.get("page")
+            ),
+            "unassigned": services.unassigned_legacy_rentals(equipment),
+            "activation_error": activation_error,
+        },
+        status=status,
+    )
 
 
 @login_required

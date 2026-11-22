@@ -2,7 +2,7 @@
 
 Camera Rental phát triển phần mềm vận hành cho thuê máy ảnh, ống kính và thiết bị quay chụp. Mục tiêu v2.0 là nối đặt thuê nhiều thiết bị với giữ lịch, giao nhận theo từng tài sản, bảo trì và quyết toán cọc. [Thiết kế sản phẩm v2.0](docs/v2-product-design.md)
 
-Phiên bản chạy hiện tại là Base v1.0 local/demo. Khách có thể đăng ký, đăng nhập, tìm thiết bị, tra lịch, đặt và hủy đơn. Nhân viên quản lý tồn, bàn giao và ghi nhận trả. Web và API dùng chung nghiệp vụ. [Thiết lập local và tài khoản demo](docs/setup.md)
+V2-M1 local/demo bổ sung đặt nhiều mẫu trong cùng kỳ, giữ theo mã kho và lịch giữ cho nhân viên trên nền Base v1.0. Khách vẫn có thể tra lịch và đặt một mẫu từ danh mục. Nhân viên vẫn bàn giao và nhận trả nguyên đơn. [Thiết lập local và tài khoản demo](docs/setup.md)
 
 | Bạn cần | Đọc |
 | --- | --- |

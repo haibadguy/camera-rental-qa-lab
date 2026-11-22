@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Equipment
+from .models import AssetUnit, Equipment
 from .services import MAX_RENTAL_DAYS, MAX_RENTAL_QUANTITY, MIN_RENTAL_QUANTITY
 
 
@@ -28,6 +28,47 @@ class BookingForm(PeriodForm):
         max_value=MAX_RENTAL_QUANTITY,
         initial=MIN_RENTAL_QUANTITY,
     )
+
+
+class OrderForm(PeriodForm):
+    def __init__(self, *args, equipment, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.products = []
+        for item in equipment:
+            name = f"quantity_{item.pk}"
+            self.fields[name] = forms.IntegerField(
+                label=f"Số lượng {item.name}",
+                required=False,
+                min_value=0,
+                max_value=MAX_RENTAL_QUANTITY,
+            )
+            self.products.append((item, self[name]))
+
+    def clean(self):
+        data = super().clean()
+        if any(
+            name.startswith("quantity_")
+            and name not in self.fields
+            and self.data.get(name) not in ("", "0")
+            for name in self.data
+        ):
+            raise forms.ValidationError(
+                "Danh mục đã thay đổi. Chọn lại thiết bị trước khi đặt."
+            )
+        data["lines"] = [
+            {"equipment_id": item.pk, "quantity": data[field.name]}
+            for item, field in self.products
+            if data.get(field.name)
+        ]
+        if not self.errors and not data["lines"]:
+            raise forms.ValidationError("Chọn số lượng cho ít nhất một mẫu thiết bị.")
+        return data
+
+
+class AssetForm(forms.ModelForm):
+    class Meta:
+        model = AssetUnit
+        fields = ("code", "serial")
 
 
 class CatalogFilterForm(PeriodForm):
@@ -81,3 +122,4 @@ class EquipmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields["code"].disabled = True
+            self.fields["total_stock"].disabled = self.instance.tracks_assets

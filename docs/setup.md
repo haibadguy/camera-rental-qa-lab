@@ -22,6 +22,8 @@ Trên shell khác, dùng các biến trong `.env.example` để tạo `.env` v�
 
 Danh mục gồm ba mẫu thiết bị. Ngày của đơn demo tính theo giờ Việt Nam ở lần seed đầu. Chạy lại seed vẫn giữ tài khoản, thiết bị và trạng thái đơn đã thay đổi. Đơn cũ chưa từng lưu thời điểm bàn giao sẽ giữ giá trị trống sau migration.
 
+Danh mục demo mới có mã kho cho cả ba mẫu. Mở **Đặt nhiều thiết bị** để chọn Sony A6400 và Sigma 30mm Sony E trong cùng kỳ. Nhân viên xem lịch theo mã kho tại **Kho thiết bị → Mã kho và lịch giữ**, hoặc đổi máy cùng mẫu trên chi tiết đơn đã đặt.
+
 Ảnh WebP trong [thư mục ảnh giao diện](../catalog/static/catalog/images/) được tạo bằng ImageGen. Trang danh mục dùng `editorial.webp`, ảnh người cầm máy cạnh ống kính trên bờ tường bê tông trong ánh nắng cam. Màn đăng nhập dùng `hero.webp`, ảnh máy mirrorless trên đá tối. Ba ảnh minh họa thiết bị `sony.webp`, `canon.webp` và `lens.webp` lần lượt mô phỏng Sony A6400, Canon EOS R50 và Sigma 30mm f/1.4 trong studio. Phông Geist và giấy phép đi kèm nằm trong [thư mục phông chữ](../catalog/static/catalog/fonts/).
 
 Thông số demo dựa trên tài liệu hãng của [Sony A6400](https://www.sony.com/electronics/support/e-mount-body/ilce-6400/specifications), [Canon EOS R50](https://www.usa.canon.com/support/p/eos-r50) và [Sigma 30mm F1.4](https://www.sigma-global.com/en/lenses/c016_30_14/).
@@ -68,3 +70,14 @@ docker compose --env-file <path-to-env> -p <project-name> stop
 ```
 
 Nếu dùng volume từ bản cũ, đặt `POSTGRES_PASSWORD` trong `.env` bằng mật khẩu đã dùng để khởi tạo volume đó. PostgreSQL chỉ áp dụng mật khẩu từ môi trường khi tạo volume mới. Nếu phiên Codex báo `permission denied` nhưng terminal Windows hiện cả Client và Server, chạy lệnh `Verify` trong terminal Windows đó.
+
+## Chuyển mẫu v1 sang giữ theo mã kho
+
+Migration `catalog.0005` yêu cầu PostgreSQL có extension `btree_gist` hoặc tài khoản migration được phép tạo extension. Migration tạo một dòng theo snapshot của mỗi đơn v1. ID, trạng thái, ngày, giá và timestamp đã lưu vẫn giữ nguyên. Các trường chưa từng được ghi vẫn để trống.
+
+1. Diễn tập trên bản sao PostgreSQL biệt lập trước khi duyệt chuyển đổi môi trường có dữ liệu thật.
+2. Trong **Kho thiết bị → Mã kho và lịch giữ**, đăng ký mã kho thực tế cho từng món của mẫu cần chuyển. Nhập serial nếu đã kiểm kê được.
+3. Xem danh sách đơn v1 chưa đối soát. Mẫu tiếp tục chạy theo tồn tổng cho đến khi các đơn chưa bàn giao, đang ở ngoài kho hoặc trả sớm còn giữ kỳ đã được xử lý theo vòng đời Base. Màn kho chặn bật giữ theo mã kho khi còn một trong các đơn đó.
+4. Khi số lượng đăng ký khớp tổng tồn v1 và danh sách đã hết, bật giữ theo mã kho. Từ đó đơn một dòng và đơn nhiều dòng giữ cùng một nguồn tài sản. Mẫu xuất hiện trong luồng đặt nhiều thiết bị.
+
+Sau khi đã ghi mã kho hoặc đơn nhiều dòng, rollback migration `0005` bị chặn. Với chuyển đổi thật, dùng phương án khôi phục đã diễn tập và giữ các giao dịch phát sinh.

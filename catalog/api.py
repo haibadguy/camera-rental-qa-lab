@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from . import services
-from .models import Equipment, Rental
+from .models import Equipment, Rental, RentalLine
 
 
 class PeriodSerializer(serializers.Serializer):
@@ -14,7 +14,7 @@ class PeriodSerializer(serializers.Serializer):
     return_date = serializers.DateField()
 
 
-class BookingSerializer(PeriodSerializer):
+class BookingLineSerializer(serializers.Serializer):
     equipment_id = serializers.IntegerField(
         min_value=1, max_value=9_223_372_036_854_775_807
     )
@@ -22,6 +22,14 @@ class BookingSerializer(PeriodSerializer):
         min_value=services.MIN_RENTAL_QUANTITY,
         max_value=services.MAX_RENTAL_QUANTITY,
     )
+
+
+class BookingSerializer(PeriodSerializer, BookingLineSerializer):
+    pass
+
+
+class OrderBookingSerializer(PeriodSerializer):
+    lines = BookingLineSerializer(many=True, allow_empty=False)
 
 
 class CatalogQuerySerializer(serializers.Serializer):
@@ -74,14 +82,46 @@ class RentalSerializer(serializers.ModelSerializer):
         )
 
 
-def _rental_response(operation, *args, success_status=200, **kwargs):
+class RentalLineSerializer(serializers.ModelSerializer):
+    equipment_id = serializers.IntegerField()
+    total_vnd = serializers.DecimalField(
+        max_digits=26, decimal_places=0, coerce_to_string=True
+    )
+
+    class Meta:
+        model = RentalLine
+        fields = ("equipment_id", "quantity", "daily_rate_vnd", "total_vnd")
+
+
+class OrderSerializer(RentalSerializer):
+    lines = RentalLineSerializer(many=True, read_only=True)
+
+    class Meta(RentalSerializer.Meta):
+        fields = (
+            "id",
+            "pickup_date",
+            "return_date",
+            "lines",
+            "total_vnd",
+            "status",
+            "picked_up_at",
+            "returned_at",
+            "cancellation_reason",
+            "is_overdue",
+            "was_returned_late",
+        )
+
+
+def _rental_response(
+    operation, *args, success_status=200, serializer=RentalSerializer, **kwargs
+):
     try:
         rental = operation(*args, **kwargs)
     except (Rental.DoesNotExist, Equipment.DoesNotExist) as error:
         raise Http404 from error
     except services.RentalError as error:
         return Response({"detail": str(error)}, status=error.status)
-    return Response(RentalSerializer(rental).data, status=success_status)
+    return Response(serializer(rental).data, status=success_status)
 
 
 @api_view(["GET"])
@@ -114,8 +154,12 @@ def equipment_detail(request, equipment_id):
 def rentals(request):
     if request.method == "GET":
         return Response(
-            RentalSerializer(services.customer_rentals(request.user), many=True).data
+            RentalSerializer(
+                services.customer_rentals(request.user, legacy_only=True), many=True
+            ).data
         )
+    if "lines" in request.data:
+        return Response({"detail": "Đơn nhiều dòng dùng /api/v2/rentals/."}, status=400)
     booking = BookingSerializer(data=request.data)
     booking.is_valid(raise_exception=True)
     return _rental_response(
@@ -126,29 +170,71 @@ def rentals(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def rental_detail(request, rental_id):
-    rental = get_object_or_404(services.customer_rentals(request.user), pk=rental_id)
+    rental = get_object_or_404(
+        services.customer_rentals(request.user, legacy_only=True), pk=rental_id
+    )
     return Response(RentalSerializer(rental).data)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def cancel(request, rental_id):
-    return _rental_response(services.cancel_rental, request.user, rental_id)
+    return _rental_response(
+        services.cancel_rental, request.user, rental_id, legacy_only=True
+    )
 
 
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
 def pick_up(request, rental_id):
-    return _rental_response(services.pick_up_rental, request.user, rental_id)
+    return _rental_response(
+        services.pick_up_rental, request.user, rental_id, legacy_only=True
+    )
 
 
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
 def no_show(request, rental_id):
-    return _rental_response(services.mark_no_show, request.user, rental_id)
+    return _rental_response(
+        services.mark_no_show, request.user, rental_id, legacy_only=True
+    )
 
 
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
 def record_return(request, rental_id):
-    return _rental_response(services.return_rental, request.user, rental_id)
+    return _rental_response(
+        services.return_rental, request.user, rental_id, legacy_only=True
+    )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def orders(request):
+    if request.method == "GET":
+        orders = services.customer_rentals(request.user).prefetch_related("lines")
+        return Response(OrderSerializer(orders, many=True).data)
+    booking = OrderBookingSerializer(data=request.data)
+    booking.is_valid(raise_exception=True)
+    return _rental_response(
+        services.book_order,
+        request.user,
+        serializer=OrderSerializer,
+        success_status=201,
+        **booking.validated_data,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def order_detail(request, rental_id):
+    rental = get_object_or_404(services.customer_rentals(request.user), pk=rental_id)
+    return Response(OrderSerializer(rental).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def cancel_order(request, rental_id):
+    return _rental_response(
+        services.cancel_rental, request.user, rental_id, serializer=OrderSerializer
+    )

@@ -2,6 +2,8 @@
 
 **Đề xuất ngày 22/11/2026 · Chờ Hải duyệt quy tắc nghiệp vụ.** v2 phục vụ một cửa hàng cho thuê máy ảnh, ống kính và thiết bị quay chụp. Khách có thể đặt nhiều món cho cùng kỳ thuê. Nhân viên theo dõi được từng thiết bị từ lúc giữ lịch đến khi đã kiểm tra sau trả. Quản lý có thể giải thích từng khoản thu, khấu trừ và hoàn cọc từ lịch sử đơn.
 
+Hải đã duyệt V2-M1. Hợp đồng đã triển khai và cách đối soát mẫu v1 nằm trong [kiến trúc](architecture.md) và [thiết lập](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho). Các quyết định theo mốc sau tiếp tục được duyệt riêng.
+
 Pilot đề xuất dùng một điểm nhận–trả trực tiếp, giá ngày bằng VND và thanh toán do nhân viên ghi nhận tại quầy. Giữ kỳ `[ngày nhận, ngày trả)`, 1–30 ngày và múi giờ `Asia/Ho_Chi_Minh` theo Base. [Đặc tả Base](requirements.md) · [Roadmap sản phẩm](../ROADMAP.md)
 
 ## Quy trình thực tế và đối chiếu sản phẩm

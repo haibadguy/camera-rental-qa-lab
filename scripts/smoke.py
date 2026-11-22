@@ -118,6 +118,24 @@ def main():
         "PASS: live registration, login, authorization, catalog, availability, booking, pickup, early return and cancellation"
     )
 
+    camera = api.request("/api/equipment/?search=CAM-001")[0]
+    assert "Kỳ thuê chung" in customer.request("/rentals/new/")
+    customer.request(
+        "/rentals/new/",
+        form=future | {f"quantity_{camera['id']}": 1, f"quantity_{equipment['id']}": 1},
+    )
+    multi = api.request("/api/v2/rentals/", credentials=credentials)[0]
+    assert len(multi["lines"]) == 2
+    multi_id = multi["id"]
+    api.request(f"/api/rentals/{multi_id}/", credentials=credentials, expected=404)
+    calendar = staff.request(f"/staff/equipment/{camera['id']}/assets/")
+    assert f"Đơn #{multi_id}" in calendar and "CAM-001-U" in calendar
+    cancelled = api.request(
+        f"/api/v2/rentals/{multi_id}/cancel/", payload={}, credentials=credentials
+    )
+    assert cancelled["status"] == "CANCELLED"
+    print("PASS: multi-SKU web booking, staff asset calendar, v2 API and full cancellation")
+
 
 if __name__ == "__main__":
     main()

@@ -15,13 +15,18 @@
   {% if rental.was_returned_late %}<p class="notice notice-warning">Thiết bị đã được trả sau ngày hẹn.</p>{% endif %}
   <div class="order-layout">
     <section class="panel order-panel" aria-labelledby="order-heading">
-      <p class="code">{{ rental.equipment.get_kind_display }} / {{ rental.equipment.code }}</p>
-      <h2 id="order-heading">{{ rental.equipment.name }}</h2>
+      <h2 id="order-heading">Thiết bị trong đơn</h2>
+      <ul>
+        {% for line in rental.lines.all %}
+          <li><strong>{{ line.equipment.name }}</strong> · {{ line.quantity }} × {{ line.daily_rate_vnd|vnd }}/ngày</li>
+        {% empty %}
+          {% if rental.equipment_id %}<li><strong>{{ rental.equipment.name }}</strong> · {{ rental.quantity }} × {{ rental.daily_rate_vnd|vnd }}/ngày</li>{% endif %}
+        {% endfor %}
+      </ul>
       <dl class="details order-details">
         {% if staff_view %}<div><dt>Khách thuê</dt><dd>{{ rental.customer.username }}</dd></div>{% endif %}
         <div><dt>Ngày nhận</dt><dd>{{ rental.pickup_date|date:'d/m/Y' }}</dd></div>
         <div><dt>Ngày trả theo lịch</dt><dd>{{ rental.return_date|date:'d/m/Y' }}</dd></div>
-        <div><dt>Số lượng</dt><dd>{{ rental.quantity }}</dd></div>
         {% if rental.cancellation_reason %}<div><dt>Lý do hủy</dt><dd>{{ rental.get_cancellation_reason_display }}</dd></div>{% endif %}
         {% if rental.picked_up_at %}<div><dt>Thời điểm bàn giao</dt><dd>{{ rental.picked_up_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
         {% if rental.returned_at %}<div><dt>Thời điểm trả</dt><dd>{{ rental.returned_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
@@ -43,9 +48,35 @@
     <aside class="panel order-summary" aria-labelledby="payment-heading">
       <h2 id="payment-heading">Chi phí thuê</h2>
       <dl class="details">
-        <div><dt>Giá lúc đặt</dt><dd>{{ rental.daily_rate_vnd|vnd }}/ngày</dd></div>
         <div class="order-total"><dt>Tổng tiền</dt><dd>{{ rental.total_vnd|vnd }}</dd></div>
       </dl>
     </aside>
   </div>
+  {% if staff_view %}
+    <section class="panel order-panel" aria-labelledby="asset-history-heading">
+      <h2 id="asset-history-heading">Mã kho và lịch sử giữ</h2>
+      <ul class="workspace-rows">
+        {% for hold in asset_history %}
+          <li class="panel workspace-row">
+            <div>
+              <strong>{{ hold.asset.code }}</strong>
+              <p>{{ hold.period.lower|date:"d/m/Y" }} – {{ hold.period.upper|date:"d/m/Y" }}</p>
+              {% if hold.released_at %}<p>Đã giải phóng {{ hold.released_at|date:"d/m/Y H:i" }}</p>{% endif %}
+              {% if hold.replaces %}<p>Đổi từ {{ hold.replaces.asset.code }} · {{ hold.changed_by.username }} · {{ hold.created_at|date:"d/m/Y H:i" }}</p>{% endif %}
+            </div>
+            {% if not hold.released_at and can_replace_asset %}
+              <form method="post" action="{% url 'replace-asset' rental.pk hold.pk %}">
+                {% csrf_token %}
+                <label for="replacement-{{ hold.pk }}">Mã kho thay cho {{ hold.asset.code }}</label>
+                <input id="replacement-{{ hold.pk }}" name="replacement_code" maxlength="48" required>
+                <button type="submit" class="button-outline">Đổi thiết bị</button>
+              </form>
+            {% endif %}
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Đơn chưa có mã kho được gán.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
 {% endblock %}

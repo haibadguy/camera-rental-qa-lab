@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from . import services
-from .models import Equipment, Rental
+from .models import AssetReservation, Equipment, Rental, RentalLine
 
 
 class CatalogTests(TestCase):
@@ -760,6 +760,41 @@ class ConcurrentBookingTests(TransactionTestCase):
 
         with ThreadPoolExecutor(max_workers=len(requests)) as pool:
             return list(pool.map(post, requests))
+
+    def test_multi_line_requests_in_opposite_sku_order_cannot_double_book(self):
+        self.assertEqual(connection.vendor, "postgresql")
+        users = get_user_model().objects
+        first = users.create_user("first-v2")
+        second = users.create_user("second-v2")
+        staff = users.create_user("staff-v2", is_staff=True)
+        lines = []
+        for code in ("RACE-CAM", "RACE-LEN"):
+            item = Equipment.objects.create(
+                code=code, name=code, daily_rate_vnd=100, total_stock=1
+            )
+            services.register_asset(staff, item.pk, f"{code}-1")
+            services.enable_asset_tracking(staff, item.pk)
+            lines.append({"equipment_id": item.pk, "quantity": 1})
+        pickup = timezone.localdate()
+        dates = {
+            "pickup_date": pickup.isoformat(),
+            "return_date": (pickup + timedelta(days=2)).isoformat(),
+        }
+        url = reverse("api-orders")
+        self.assertCountEqual(
+            self._post_concurrently(
+                [
+                    (first, url, dates | {"lines": lines}),
+                    (second, url, dates | {"lines": list(reversed(lines))}),
+                ]
+            ),
+            [201, 409],
+        )
+        self.assertEqual(Rental.objects.count(), 1)
+        self.assertEqual(RentalLine.objects.count(), 2)
+        self.assertEqual(
+            AssetReservation.objects.filter(released_at__isnull=True).count(), 2
+        )
 
     @skipUnlessDBFeature("has_select_for_update")
     def test_two_postgres_connections_cannot_book_the_last_item_twice(self):
