@@ -1,9 +1,9 @@
 # AGENTS.md — Camera Rental Product Development
 
-## Mission and phase
-Complete a polished, maintainable Camera Rental Base v1.0. This is PRODUCT DEVELOPMENT ONLY. Do not create manual test cases, fabricated bug reports, QA portfolio materials or CV content until the owner explicitly begins Phase 2 after a frozen baseline.
+## Mission
+Develop Camera Rental as a rental operations product. Base v1.0 is the frozen technical foundation. The current goal is v2.0 Complete Rental Operations. Work on product development and developer verification only.
 
-Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md](PROJECT_PLAN.md) to locate the current work and [docs/verification.md](docs/verification.md) for recorded evidence.
+Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md](PROJECT_PLAN.md) to locate the current work, [the v2.0 proposal](docs/v2-product-design.md) for proposed scope, and [docs/verification.md](docs/verification.md) for recorded Base evidence.
 
 ## Read first
 1. Inspect `git status`, active branch, staged and untracked files.
@@ -23,7 +23,7 @@ Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md
 - Lifecycle: CONFIRMED -> PICKED_UP -> RETURNED; CONFIRMED -> CANCELLED; no-show uses documented reason. Early/late returns record actual timestamps; scheduled and physical availability differ.
 - Prevent booking and pickup over-allocation with PostgreSQL transactions and real database concurrency tests. Lock `Equipment` before `Rental` in operations that affect stock.
 - Enforce ownership/roles on backend and DRF, not through UI visibility alone. Preserve booking history.
-- Identify the requirement ID, scope and acceptance criteria before edits. Resolve scope questions against `docs/requirements.md` and report conflicts. Obtain Hải's approval before adding a business rule or changing the stack.
+- Identify the requirement ID, scope and acceptance criteria before edits. Resolve scope questions against `docs/requirements.md` for Base and owner-approved v2 requirements for new work. Report conflicts and obtain Hải's approval before adding a business rule or changing the stack.
 
 ## Code and UI quality
 - Prefer small, clear changes and idiomatic Django. No duplicate rules, needless dependencies, empty scaffolding, fake features or generated filler.
@@ -46,7 +46,7 @@ Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md
 - CI must actually run on an approved pushed branch before release readiness.
 
 ## Definition of Done
-A change is done when behavior meets the approved scope; relevant tests have run; diff is reviewed; no related regression is known; updated docs match code; and outstanding limitations are reported. Base v1.0 is ready only with working end-to-end customer/staff journeys, verified migrations and concurrency, reproducible Docker, green CI, maintainable code and owner approval.
+A change is done when behavior meets the approved scope; relevant tests have run; diff is reviewed; no related regression is known; updated docs match code; and outstanding limitations are reported. Release readiness requires working end-to-end customer and staff journeys, verified migrations and concurrency, reproducible Docker, green CI on the candidate, maintainable code and owner approval.
 
 ## Handoff format
 Always summarize: (1) what changed/why, (2) files, (3) tests actually run and outputs, (4) blockers/risks, (5) Git status and next action. For large tasks save durable state in a concise document only if needed; avoid oversized progress files.

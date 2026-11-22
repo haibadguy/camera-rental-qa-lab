@@ -1,12 +1,24 @@
-# Master Plan · Camera Rental Base v1.0
+# Kế hoạch phát triển Camera Rental
+
+## Công việc hiện tại · v2.0 Complete Rental Operations
+
+Định hướng sản phẩm ngày 22/11/2026 là phát triển v2.0 trên bản nền v1.0. Đề án đã đối chiếu quy trình cửa hàng và các nền tảng rental management, xác định phạm vi cho pilot, thiết kế dữ liệu và thứ tự triển khai. Các quy tắc v2.0 đang chờ Hải duyệt theo từng mốc. [Đề án v2.0](docs/v2-product-design.md) · [Mốc v2.0](ROADMAP.md#roadmap-v20)
+
+| Công việc | Trạng thái | Kết quả cần đạt |
+| --- | --- | --- |
+| Product Discovery & Architecture Planning | Đã lập đề xuất | Phạm vi, hành trình, mô hình dữ liệu, chuyển đổi API và tiêu chí phát hành trong đề án v2.0. |
+| Duyệt phạm vi mốc đầu | Chờ Hải | Chốt mô hình giữ thiết bị và tiêu chí bảo toàn dữ liệu Base. |
+| V2-M1 · Đặt nhiều thiết bị | Chưa bắt đầu | Dùng `main` đã xác minh. Thêm tài sản và dòng đơn. Đặt và hủy cả đơn nguyên tử trên PostgreSQL. [Phạm vi mốc đầu](docs/v2-product-design.md#mốc-đầu-tiên-và-tiêu-chí-phát-hành) |
+
+## Base v1.0 · Technical Foundation
 
 Hải duyệt thực thi kế hoạch ngày 22/11/2026. Base là bản **local/demo** theo [R01–R08](docs/requirements.md). Thông tin nhận–trả có cấu hình tùy chọn, xác minh với dữ liệu mẫu hoặc để trống. Công bố thông tin cửa hàng thật và hosting công khai thuộc vận hành. Thanh toán, giao hàng, đặt cọc, phí trả muộn, email/SMS, analytics, đổi frontend framework và tách service nằm ngoài Base. Hải phê duyệt riêng mọi thay đổi nghiệp vụ hoặc stack.
 
-## Điểm xuất phát
+### Điểm xuất phát
 
 Cuối M2, đã có bằng chứng kỹ thuật local cho một phần M3. Audit nhánh `refactor/modular-structure` tại HEAD `0d81fac` ghi 29 file sửa và 20 file untracked, staging trống. Compose biệt lập cổng 18032 pass 31 test PostgreSQL, gồm hai ca đồng thời, và HTTP smoke. Chrome headless đã chạy luồng khách ở 1440 × 1000, 390 × 844 và 320 × 780. Đây là bằng chứng working tree. GitHub Actions cho ứng viên chưa chạy. DRF 3.16.1 có advisory áp dụng cho API, pip 25.0.1 có advisory ở khâu cài package. [Bằng chứng](docs/verification.md) · [DRF security fixes](https://www.django-rest-framework.org/community/release-notes/#3182)
 
-## Hàng đợi thực thi
+### Hàng đợi đã hoàn tất
 
 [ROADMAP.md](ROADMAP.md) sở hữu milestones và G0–G4. Bảng này sở hữu task, phụ thuộc và trạng thái. Nỗ lực S là một lượt kiểm tra tập trung, M là một phiên triển khai và xác minh.
 
@@ -22,18 +34,14 @@ Cuối M2, đã có bằng chứng kỹ thuật local cho một phần M3. Audit
 | T08 · M4 · Handoff độc lập | P0 / S | T06 | DONE · `329d945` | Reviewer hoặc agent có ngữ cảnh mới dùng tài liệu repo dựng và chạy Verify, rồi chỉ đúng module, test, tác động migration và rollback cho một thay đổi giả định. |
 | T09 · M4 · Đóng băng Base | P0 / S | G0–G3 và T08 | DONE · `v1.0.0-qa-baseline` | Hải duyệt ứng viên, merge, release và tag riêng. Nếu SHA sau merge đổi, kiểm chứng đúng commit định gắn tag. `v1.0.0-qa-baseline` trỏ SHA đã duyệt. |
 
-G0–G4 đã đạt cho baseline `v1.0.0-qa-baseline` tại `31ca8a0`. Tag là mốc đối chiếu cho các thay đổi sau phát hành. [GitHub Release](https://github.com/haibadguy/camera-rental-qa-lab/releases/tag/v1.0.0-qa-baseline) · [Bằng chứng theo commit](docs/verification.md)
+G0–G4 của Base đã đạt. Baseline `v1.0.0-qa-baseline` trỏ commit `31ca8a0` đã qua CI trên `main`. Tag là mốc đối chiếu cho thay đổi sau phát hành. [GitHub Release](https://github.com/haibadguy/camera-rental-qa-lab/releases/tag/v1.0.0-qa-baseline) · [Bằng chứng theo commit](docs/verification.md)
 
-## Công việc sản phẩm hiện tại
+Sau khi đóng băng, bản sửa R08 đã vào `main` tại `b334418`. Form báo lỗi mật khẩu quá ngắn bằng tiếng Việt, giữ ngưỡng tám ký tự và các kiểm tra hiện có. Luồng đăng ký và quay lại trang đặt thuê đã được kiểm chứng. [Trạng thái Base và R08](docs/implementation-status.md) · [Kiểm chứng kỹ thuật](docs/verification.md)
 
-R08 · Bản sửa thông báo mật khẩu quá ngắn đã qua kiểm chứng local. Form trả lời bằng tiếng Việt, giữ ngưỡng tám ký tự và các kiểm tra mật khẩu hiện có. Đăng ký và trở lại trang đặt thuê hoạt động. Nhánh `fix/r08-password-localization` chờ duyệt tích hợp. [Kiểm chứng kỹ thuật](docs/verification.md)
-
-Kiểm chứng kỹ thuật đi cùng từng thay đổi sản phẩm. QA độc lập và hồ sơ portfolio là bước cuối, sau khi các sửa đổi sản phẩm đã hoàn tất và Hải xác nhận bản kiểm thử cuối.
-
-## Biên thay đổi và kiểm chứng
+### Biên thay đổi và kiểm chứng của Base
 
 - Web và DRF gọi `catalog.services`. Giữ module nghiệp vụ, hợp đồng URL/JSON, app label và lịch sử migration theo [kiến trúc](docs/architecture.md). PostgreSQL kiểm chứng giữ lịch, tồn vật lý, snapshot giá và thứ tự khóa `Equipment` trước `Rental`.
 - Dùng Compose, cổng và PostgreSQL riêng cho kiểm chứng. Giữ volume hiện có. Khi Git hoặc Docker gặp lỗi, ghi lệnh và lỗi cụ thể, giữ checkpoint và retry trên môi trường riêng. Gắn bằng chứng với SHA source và phiên bản image. Xem [setup](docs/setup.md) và [nhật ký kiểm chứng](docs/verification.md).
 - Mỗi task theo Spec → Task → Code → Verify → Review → Commit. Mỗi worktree có một người sửa. Nạp skill trong [`.agents/skills`](.agents/skills/) theo task. Review theo diff và yêu cầu liên quan. Khi cần sửa, dùng commit nhỏ có thể hoàn tác.
 - Mỗi phiên lấy task đầu tiên còn mở, cập nhật trạng thái, bằng chứng và blocker. Audit toàn dự án ở ứng viên release hoặc khi có sự cố nghiêm trọng. Chỉ mở lại kế hoạch nếu có bằng chứng về sai sót quan trọng, rủi ro mới hoặc quyết định của Hải, rồi ghi mục và gate bị ảnh hưởng tại đây.
-- GitHub push, PR, merge, release và tag cần Hải duyệt theo từng hành động. Phase 2 chỉ bắt đầu sau khi baseline đóng băng và Hải xác nhận mở Phase 2.
+- GitHub push, PR, merge, release và tag cần Hải duyệt theo từng hành động.
