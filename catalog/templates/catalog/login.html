@@ -1,0 +1,18 @@
+{% extends "catalog/base.html" %}
+{% load static %}
+{% block title %}Đăng nhập | Camera Rental{% endblock %}
+{% block content %}
+  <section class="auth-layout">
+    <div class="auth-content">
+      <h1>Đăng nhập</h1>
+      <form method="post" class="auth-form">
+        {% csrf_token %}
+        {{ form.as_div }}
+        <input type="hidden" name="next" value="{{ next }}">
+        <button>Đăng nhập <span aria-hidden="true">↗</span></button>
+      </form>
+      <p class="auth-footnote">Chưa có tài khoản? <a href="{% url 'register' %}{% if next %}?next={{ next|urlencode:'' }}{% endif %}">Đăng ký tài khoản khách hàng</a>.</p>
+    </div>
+    <div class="auth-photo"><img src="{% static 'catalog/images/hero.webp' %}" alt="" width="1400" height="933" loading="lazy" decoding="async"></div>
+  </section>
+{% endblock %}

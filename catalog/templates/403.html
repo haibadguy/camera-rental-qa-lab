@@ -1,0 +1,8 @@
+{% extends "catalog/base.html" %}
+{% block title %}Thiếu quyền truy cập | Camera Rental{% endblock %}
+{% block content %}
+  <section class="panel error-page">
+    <h1>Bạn không có quyền truy cập trang này</h1>
+    <a class="button button-outline" href="{% url 'equipment-list' %}">Về danh mục thiết bị</a>
+  </section>
+{% endblock %}

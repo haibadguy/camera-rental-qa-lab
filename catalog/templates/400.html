@@ -1,0 +1,8 @@
+{% extends "catalog/base.html" %}
+{% block title %}Yêu cầu không hợp lệ | Camera Rental{% endblock %}
+{% block content %}
+  <section class="panel error-page">
+    <h1>Yêu cầu không hợp lệ</h1>
+    <a class="button button-outline" href="{% url 'equipment-list' %}">Về danh mục thiết bị</a>
+  </section>
+{% endblock %}

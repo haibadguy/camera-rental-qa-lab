@@ -1,0 +1,70 @@
+{% extends "catalog/base.html" %}
+{% load pricing l10n static %}
+{% block title %}{{ title }} | Camera Rental{% endblock %}
+{% block content %}
+  {% if booking_item %}
+    <nav class="breadcrumb" aria-label="Đường dẫn">
+      <a href="{% url 'equipment-detail' booking_item.pk %}">{{ booking_item.name }}</a><span aria-hidden="true">/</span><span aria-current="page">Đặt thuê</span>
+    </nav>
+    <div class="page-heading"><h1>Đặt thuê thiết bị</h1></div>
+    <form method="post" class="booking-layout" data-daily-rate="{{ booking_item.daily_rate_vnd|unlocalize }}" data-max-rental-days="{{ form.max_rental_days|unlocalize }}">
+      {% csrf_token %}
+      <section class="panel form-panel" aria-labelledby="schedule-heading">
+        <h2 id="schedule-heading">Kỳ thuê và số lượng</h2>
+        <p class="muted">Kỳ thuê từ 1 đến {{ form.max_rental_days }} ngày, tính đến trước ngày trả.</p>
+        {{ form.non_field_errors }}
+        <div class="booking-fields">
+          {% for field in form %}<div>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+        </div>
+        <div class="estimate" data-booking-estimate hidden>
+          <div>
+            <span>Tạm tính</span>
+            <small data-estimate-breakdown></small>
+          </div>
+          <output for="id_pickup_date id_return_date id_quantity" aria-live="polite"></output>
+        </div>
+        {% include "catalog/handoff_info.html" %}
+        <button>{{ submit_label }} <span aria-hidden="true">↗</span></button>
+      </section>
+      <aside class="panel booking-summary" aria-label="Chi phí thuê">
+        {% include "catalog/equipment_art.html" with item=booking_item %}
+        <div class="summary-content">
+          <p class="code">{{ booking_item.get_kind_display }} / {{ booking_item.code }}</p>
+          <h2>{{ booking_item.name }}</h2>
+          <p class="price">{{ booking_item.daily_rate_vnd|vnd }}<span class="price-unit">/ngày mỗi thiết bị</span></p>
+        </div>
+      </aside>
+    </form>
+  {% elif request.resolver_match.url_name == 'register' %}
+    <section class="auth-layout">
+      <div class="auth-content">
+        <h1>{{ title }}</h1>
+        <form method="post" class="auth-form">
+          {% csrf_token %}
+          {{ form.as_div }}
+          <button>{{ submit_label }} <span aria-hidden="true">↗</span></button>
+        </form>
+        <p class="auth-footnote">Đã có tài khoản? <a href="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode:'' }}{% endif %}">Đăng nhập</a>.</p>
+      </div>
+      <div class="auth-photo"><img src="{% static 'catalog/images/hero.webp' %}" alt="" width="1400" height="933" loading="lazy" decoding="async"></div>
+    </section>
+  {% else %}
+    <nav class="breadcrumb" aria-label="Đường dẫn">
+      <a href="{% url 'staff-equipment' %}">Kho thiết bị</a><span aria-hidden="true">/</span><span aria-current="page">{{ title }}</span>
+    </nav>
+    <div class="page-heading"><h1>{{ title }}</h1></div>
+    <form method="post" class="panel form-panel equipment-form">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="equipment-fields">
+        {% for field in form %}
+          <div class="equipment-field field-{{ field.name }}">
+            {{ field.label_tag }}{{ field }}{{ field.errors }}
+            {% if field.help_text %}<div class="helptext" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <button>{{ submit_label|default:"Lưu" }} <span aria-hidden="true">↗</span></button>
+    </form>
+  {% endif %}
+{% endblock %}

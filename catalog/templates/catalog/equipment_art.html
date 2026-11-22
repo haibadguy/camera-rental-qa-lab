@@ -1,0 +1,11 @@
+{% load static %}
+{% if item.code == 'CAM-002' %}
+  {% static 'catalog/images/canon.webp' as equipment_image %}
+{% elif item.kind == 'LENS' %}
+  {% static 'catalog/images/lens.webp' as equipment_image %}
+{% else %}
+  {% static 'catalog/images/sony.webp' as equipment_image %}
+{% endif %}
+<div class="product-art">
+  <img src="{{ equipment_image }}" alt="" width="900" height="600" decoding="async"{% if eager %} fetchpriority="high"{% else %} loading="lazy"{% endif %}>
+</div>

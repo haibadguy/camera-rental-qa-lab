@@ -1,0 +1,44 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}{{ title }} | Camera Rental{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <h1>{{ title }}</h1>
+    {% if not staff_view %}<a class="button button-outline" href="{% url 'equipment-list' %}#thiet-bi">Xem danh mục <span aria-hidden="true">↗</span></a>{% endif %}
+  </div>
+  {% if staff_view %}
+    <nav class="kind-tabs staff-queues" aria-label="Đơn cần xử lý">
+      {% for value, label in queues %}
+        <a href="{% url 'staff-rentals' %}{% if value != 'all' %}?queue={{ value }}{% endif %}"{% if value == active_queue %} aria-current="true"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+  <ul class="workspace-rows">
+    {% for rental in rentals %}
+      <li class="panel workspace-row rental-row">
+        <div class="row-identity">
+          <p class="code">Đơn #{{ rental.pk }}</p>
+          <h2>
+            <a class="row-link" href="{% if staff_view %}{% url 'staff-rental-detail' rental.pk %}{% else %}{% url 'rental-detail' rental.pk %}{% endif %}">{{ rental.equipment.name }}</a>
+          </h2>
+          {% if staff_view %}<p class="muted">Khách {{ rental.customer.username }}</p>{% endif %}
+        </div>
+        <div class="row-period">
+          <span class="row-label">Kỳ thuê</span>
+          <span>{{ rental.pickup_date|date:'d/m/Y' }} – {{ rental.return_date|date:'d/m/Y' }}</span>
+        </div>
+        <div class="row-total">
+          <span class="row-label">Tổng tiền</span>
+          <strong>{{ rental.total_vnd|vnd }}</strong>
+        </div>
+        <div class="row-status">
+          <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+          {% if rental.is_overdue %}<p class="status-warning">Quá hạn trả thiết bị</p>{% endif %}
+        </div>
+        <span class="card-arrow" aria-hidden="true">↗</span>
+      </li>
+    {% empty %}
+      <li class="panel empty-state">{% if staff_view and active_queue != 'all' %}Không có đơn trong mục này.{% else %}Chưa có đơn thuê.{% endif %}</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

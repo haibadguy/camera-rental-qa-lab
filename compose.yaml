@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: camera_rental
+      POSTGRES_USER: camera_rental
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/dev.ps1 first or set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: .
+    command:
+      - sh
+      - -ec
+      - |
+        python manage.py migrate --noinput
+        python manage.py seed_demo
+        exec python manage.py runserver 0.0.0.0:8000 --noreload --insecure
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Run scripts/dev.ps1 first or set DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      RENTAL_STORE_NAME: ${RENTAL_STORE_NAME:-}
+      RENTAL_PICKUP_ADDRESS: ${RENTAL_PICKUP_ADDRESS:-}
+      RENTAL_PICKUP_HOURS: ${RENTAL_PICKUP_HOURS:-}
+      RENTAL_SUPPORT_PHONE: ${RENTAL_SUPPORT_PHONE:-}
+      RENTAL_SUPPORT_URL: ${RENTAL_SUPPORT_URL:-}
+      RENTAL_PICKUP_NOTES: ${RENTAL_PICKUP_NOTES:-}
+      POSTGRES_HOST: db
+      POSTGRES_DB: camera_rental
+      POSTGRES_USER: camera_rental
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/dev.ps1 first or set POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/', timeout=2).close()"
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres_data:

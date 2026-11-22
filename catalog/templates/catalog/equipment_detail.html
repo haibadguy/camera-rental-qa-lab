@@ -1,0 +1,43 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}{{ item.name }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn">
+    <a href="{% url 'equipment-list' %}#thiet-bi">Danh mục</a><span aria-hidden="true">/</span><span aria-current="page">{{ item.name }}</span>
+  </nav>
+  <div class="product-detail">
+    <div class="product-visual">
+      {% include "catalog/equipment_art.html" with eager=True %}
+      <p class="image-note">Ảnh minh họa</p>
+    </div>
+    <div class="product-info">
+      <p class="code">{{ item.get_kind_display }} <span aria-hidden="true">/</span> {{ item.code }}</p>
+      <h1>{{ item.name }}</h1>
+      <p class="price price-large">{{ item.daily_rate_vnd|vnd }}<span class="price-unit">/ngày</span></p>
+      <section class="panel product-booking" aria-labelledby="calendar-title">
+        <h2 id="calendar-title">Kiểm tra lịch thuê</h2>
+        <p class="muted">Thuê từ 1 đến {{ period_form.max_rental_days }} ngày. Ngày trả không tính tiền thuê.</p>
+        <form method="get" class="period-form">
+          {{ period_form.non_field_errors }}
+          <div class="date-fields">
+            {% for field in period_form %}<div>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+          </div>
+          <button class="button-outline">Kiểm tra lịch trống</button>
+        </form>
+        {% if availability != None %}
+          {% if availability > 0 %}
+            <p class="notice notice-success" role="status">Còn {{ availability }} thiết bị theo lịch đã chọn.</p>
+          {% else %}
+            <p class="notice notice-warning" role="status">Không còn thiết bị theo lịch này. Hãy chọn kỳ thuê khác.</p>
+          {% endif %}
+        {% endif %}
+        {% if availability != 0 %}<a class="button booking-button" href="{{ booking_url }}">Đặt thuê thiết bị <span aria-hidden="true">↗</span></a>{% endif %}
+      </section>
+      <section class="product-specs" aria-labelledby="spec-title">
+        <h2 id="spec-title">Thông số và phụ kiện</h2>
+        {% if item.specifications %}<div class="specs">{{ item.specifications }}</div>{% else %}<p class="muted">Thiết bị chưa có thông số chi tiết.</p>{% endif %}
+      </section>
+      {% include "catalog/handoff_info.html" %}
+    </div>
+  </div>
+{% endblock %}
