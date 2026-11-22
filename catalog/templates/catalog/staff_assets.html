@@ -31,31 +31,33 @@
         </form>
       {% endif %}
     </section>
-    <form method="post" class="panel order-summary">
+    <form method="post" class="panel order-summary asset-form">
       <h2>Đăng ký thiết bị vật lý</h2>
       {% csrf_token %}
       {{ form.as_p }}
       <button type="submit">Lưu mã kho</button>
     </form>
   </div>
-  <h2>Lịch giữ thiết bị</h2>
-  <ul class="workspace-rows">
-    {% for hold in calendar %}
-      <li class="panel workspace-row">
-        <strong>{{ hold.asset.code }}</strong>
-        <a href="{% url 'staff-rental-detail' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a>
-        <span>{{ hold.period.lower|date:"d/m/Y" }} – {{ hold.period.upper|date:"d/m/Y" }}</span>
-        <span>{% if hold.released_at %}Đã giải phóng{% else %}{{ hold.line.rental.get_status_display }}{% endif %}</span>
-      </li>
-    {% empty %}
-      <li class="panel empty-state">Chưa có lịch giữ cho mẫu này.</li>
-    {% endfor %}
-  </ul>
-  {% if calendar.has_other_pages %}
-    <nav class="actions" aria-label="Trang lịch giữ">
-      {% if calendar.has_previous %}<a href="?page={{ calendar.previous_page_number }}">Trang trước</a>{% endif %}
-      <span>Trang {{ calendar.number }} / {{ calendar.paginator.num_pages }}</span>
-      {% if calendar.has_next %}<a href="?page={{ calendar.next_page_number }}">Trang sau</a>{% endif %}
-    </nav>
-  {% endif %}
+  <section class="asset-calendar" aria-labelledby="calendar-heading">
+    <h2 id="calendar-heading">Lịch giữ thiết bị</h2>
+    <ul class="workspace-rows">
+      {% for hold in calendar %}
+        <li class="panel workspace-row asset-calendar-row">
+          <strong>{{ hold.asset.code }}</strong>
+          <a href="{% url 'staff-rental-detail' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a>
+          <span>{{ hold.period.lower|date:"d/m/Y" }} – {{ hold.period.upper|date:"d/m/Y" }}</span>
+          <span>{% if hold.released_at %}Đã giải phóng{% else %}{{ hold.line.rental.get_status_display }}{% endif %}</span>
+        </li>
+      {% empty %}
+        <li class="panel empty-state">Chưa có lịch giữ cho mẫu này.</li>
+      {% endfor %}
+    </ul>
+    {% if calendar.has_other_pages %}
+      <nav class="actions" aria-label="Trang lịch giữ">
+        {% if calendar.has_previous %}<a href="?page={{ calendar.previous_page_number }}">Trang trước</a>{% endif %}
+        <span>Trang {{ calendar.number }} / {{ calendar.paginator.num_pages }}</span>
+        {% if calendar.has_next %}<a href="?page={{ calendar.next_page_number }}">Trang sau</a>{% endif %}
+      </nav>
+    {% endif %}
+  </section>
 {% endblock %}
