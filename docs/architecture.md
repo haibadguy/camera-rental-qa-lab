@@ -1,4 +1,4 @@
-# Kiến trúc MVP
+# Kiến trúc Camera Rental
 
 Django Templates phục vụ web và Django REST Framework phục vụ API. PostgreSQL lưu dữ liệu và Docker Compose dựng môi trường local. Các module nghiệp vụ chạy trong một Django app `catalog`. Model, app label và migrations tiếp tục thuộc `catalog`. `config` chứa settings và định tuyến. Xem [hướng dẫn chạy](setup.md).
 
@@ -67,3 +67,29 @@ API trả `400` cho dữ liệu sai, `401` khi thiếu hoặc sai thông tin xá
 | `/api/rentals/` và các route v1 | Giữ định dạng đơn một dòng. POST v1 có `lines` trả `400`. Các route xem và thao tác v1 trả `404` cho đơn nhiều dòng. POST một dòng dùng cùng nghiệp vụ và giữ tài sản cụ thể nếu mẫu đã chuyển đổi. |
 
 Các đơn v1 đang mở vẫn xử lý qua hợp đồng cũ. Giữ theo mã kho chỉ bật theo từng mẫu sau khi đối soát. [Quy trình nâng dữ liệu](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho)
+
+## Kiến trúc mục tiêu
+
+Một Django project và một PostgreSQL database phục vụ một cửa hàng. Giữ app label `catalog`, các migrations đã áp dụng và dữ liệu lịch sử. Giữ Django Templates và JavaScript cho giao diện, DRF cho API, Docker Compose cho môi trường chạy và GitHub Actions cho kiểm chứng.
+
+| Lớp | Trách nhiệm |
+| --- | --- |
+| Giao diện | Customer Portal cho danh mục và đơn của khách, Staff Workspace cho giao nhận và tồn, Manager Dashboard cho duyệt ngoại lệ, đối soát, kiểm kê và báo cáo. |
+| Adapter | Django Views, Forms, DRF và Django auth kiểm đầu vào, xác thực và chuyển yêu cầu tới nghiệp vụ chia sẻ. |
+| Nghiệp vụ | `catalog/services.py` là điểm vào chung. `equipment.py` sở hữu danh mục và giá niêm yết, `inventory.py` sở hữu khả dụng, kho vật lý và xung đột lịch, `rentals.py` điều phối đơn và giao nhận. Tách module nội bộ cho bảo trì, tiền hoặc báo cáo khi có trách nhiệm và kiểm thử riêng. |
+| Dữ liệu | ORM và PostgreSQL lưu các giao dịch và lịch sử. Dùng constraints cho bất biến có thể cưỡng chế tại DB. Báo cáo đọc cùng dữ liệu nghiệp vụ và giữ quyền quản lý ở backend. |
+
+### Schema và tương thích theo mốc
+
+| Mốc | Ảnh hưởng dự kiến |
+| --- | --- |
+| V2-M2 | Bổ sung yêu cầu đổi kỳ có kết quả phê duyệt, bản ghi giao nhận và kiểm tra theo mã kho, hiện trạng kỹ thuật, sự cố và lịch sử bảo trì. Đảm bảo mỗi tài sản có tối đa một lượt bàn giao đang mở. Dùng cùng kiểm tra lịch theo tài sản cho đặt, đổi và bảo trì đã lên lịch. Cách ly đột xuất cần chặn giao máy và báo các đơn bị ảnh hưởng dù đã có giữ chỗ. Nếu có trạng thái đóng do mất, migration phải bảo toàn timestamp thật và lịch sử đơn v1. Dùng Django Groups và quyền nghiệp vụ để chuyển vai trò nhân viên theo danh sách đã xác minh. |
+| V2-M3 | Thêm sổ giao dịch VND theo đơn và snapshot chính sách đã duyệt. Dùng khóa thao tác để tránh ghi trùng. Lưu điều chỉnh bằng bút toán có lý do và liên kết bản ghi gốc. |
+| V2-M4 | Truy vấn từ đơn, giao nhận, bảo trì và sổ tiền. Thêm phiên kiểm kê và lịch sử chênh lệch nếu cần để truy người xử lý. Chỉ thêm index khi truy vấn thực tế cho thấy cần. |
+| V2-M5 | Kiểm chứng cài mới, nâng dữ liệu từ v1 và M1, phục hồi và tương thích API trên PostgreSQL biệt lập. Mọi thay đổi hợp đồng phải có cách chuyển tiếp và được duyệt trước pilot. |
+
+Tiếp tục khóa `Equipment` theo ID tăng dần trước `Rental` trong giao dịch ảnh hưởng tồn. Khi mở rộng từ giữ chỗ sang bảo trì, kiểm chứng va chạm giữa hai loại lịch trên PostgreSQL và giữ ràng buộc loại trừ chồng lấn đã có. Sau khi khóa, kiểm lại trạng thái, kỳ và khả năng giao. Sự kiện nhận vật lý, kết quả kiểm và quyết toán là các dấu mốc riêng. [Quyết định trước V2-M2](v2-product-design.md#quyết-định-trước-v2-m2)
+
+Trong V2-M2, kiểm từng route ghi v1 với chính sách mới. Với đơn một dòng vẫn biểu diễn đúng, gọi cùng nghiệp vụ và giữ hợp đồng Base. Nếu thao tác cần dữ liệu theo mã kho mà v1 không gửi được, thiết kế lỗi rõ và đường dẫn chuyển sang v2 trước khi thay đổi hợp đồng. Đơn cũ chưa đối soát tiếp tục được báo tại màn kho. Migration tương lai giữ ID, snapshot, trạng thái và dấu thời gian đã ghi.
+
+Trước chuyển đổi trên dữ liệu thật, dừng ghi, chờ giao dịch đang chạy kết thúc, chụp điểm khôi phục rồi đối chiếu đơn, giá và lịch. Diễn tập phục hồi trên bản sao. Phương án khôi phục phải tính cả các giao dịch phát sinh sau khi mở ghi. [Quy trình V2-M1 hiện tại](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho)

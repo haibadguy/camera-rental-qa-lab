@@ -25,6 +25,10 @@ node "$env:TEMP\camera-rental-browser-5fe17aed\v2-m1-review.cjs"
 
 Các volume hiện có được giữ. Chuyển một SKU v1 đang có đơn chưa đối soát bị chặn theo [quy trình nâng dữ liệu](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho).
 
+### CI V2-M1 trên GitHub
+
+Sau lượt xác minh local ở trên, GitHub Actions đạt ở cả push và PR cho `8f79b5777f52a2a962288961debb7e6ecd95e495`. PR #5 đã merge vào `main` tại `9f7e3f502725f6d440062f00088810d3a8bebfce` và CI sau merge đạt trên cùng SHA. [PR #5](https://github.com/haibadguy/camera-rental-qa-lab/pull/5) · [CI push](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45096287167) · [CI PR](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45096319290) · [CI main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45096877293)
+
 ## Base v1.0
 
 **Base local/demo đã đóng băng · G0–G4 đạt**

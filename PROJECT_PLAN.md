@@ -1,14 +1,14 @@
 # Kế hoạch phát triển Camera Rental
 
-## Công việc hiện tại · v2.0 Complete Rental Operations
+## Công việc hiện tại
 
-Định hướng sản phẩm ngày 22/11/2026 là phát triển v2.0 trên bản nền v1.0. Đề án đã đối chiếu quy trình cửa hàng và các nền tảng rental management, xác định phạm vi cho pilot, thiết kế dữ liệu và thứ tự triển khai. Các quy tắc v2.0 đang chờ Hải duyệt theo từng mốc. [Đề án v2.0](docs/v2-product-design.md) · [Mốc v2.0](ROADMAP.md#roadmap-v20)
+Định hướng đã duyệt là **Camera Rental Management System**, một Medium Business Application cho một cửa hàng. Mục tiêu phát hành gồm giao nhận, xử lý sự cố, quyết toán tại quầy và báo cáo vận hành. [Phạm vi sản phẩm](docs/v2-product-design.md) · [Roadmap v2.0](ROADMAP.md#roadmap-v20)
 
 | Công việc | Trạng thái | Kết quả cần đạt |
 | --- | --- | --- |
-| Product Discovery & Architecture Planning | Đã lập đề xuất | Phạm vi, hành trình, mô hình dữ liệu, chuyển đổi API và tiêu chí phát hành trong đề án v2.0. |
-| Duyệt phạm vi mốc đầu | Đã duyệt | Pilot một điểm, giữ tài sản nguyên kỳ, đổi cùng mẫu có lịch sử và bảo toàn dữ liệu Base. |
-| V2-M1 · Đặt nhiều thiết bị | Đã kiểm chứng local · Sẵn sàng mở PR | Đặt và hủy cả đơn nguyên tử trên PostgreSQL. [Nghiệp vụ V2-M1](docs/architecture.md#v2-m1--đặt-nhiều-thiết-bị) · [Bằng chứng xác minh](docs/verification.md#v2-m1--23112026) |
+| V2-M1 · Tài sản và đơn nhiều dòng | Đã tích hợp và xác minh | PR #5 đã vào `main` tại `9f7e3f5`. Đặt và hủy nguyên đơn, giữ tài sản suốt kỳ, đổi cùng mẫu có lịch sử, backfill dữ liệu Base. [Hợp đồng hiện tại](docs/architecture.md#v2-m1--đặt-nhiều-thiết-bị) · [Bằng chứng V2-M1](docs/verification.md#ci-v2-m1-trên-github) |
+| Duyệt chính sách V2-M2 | Công việc tiếp theo · Chờ Hải | Chốt các mặc định về đổi/gia hạn, bàn giao, trả từng phần, trả trễ, sự cố và quyền vận hành. [Quyết định trước V2-M2](docs/v2-product-design.md#quyết-định-trước-v2-m2) |
+| V2-M2 · Rental Operations | Chưa bắt đầu | Triển khai sau khi duyệt chính sách. Đổi/gia hạn, giao nhận theo mã kho, kiểm tra, cách ly, bảo trì, xử lý đơn bị ảnh hưởng. [Tiêu chí nghiệm thu](ROADMAP.md#roadmap-v20) |
 
 ## Base v1.0 · Technical Foundation
 

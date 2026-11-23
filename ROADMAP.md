@@ -1,21 +1,18 @@
-# Camera Rental Product Roadmap
+# Roadmap Camera Rental Management System
 
-| Phiên bản | Mục tiêu sản phẩm | Trạng thái |
-| --- | --- | --- |
-| v1.0 · Technical Foundation | Danh mục, đặt thuê một mẫu, quản lý tồn tổng, bàn giao và nhận trả, PostgreSQL, Docker và CI. | Đã đóng băng ngày 22/11/2026. [Bằng chứng Base](docs/verification.md) |
-| v2.0 · Complete Rental Operations | Một điểm nhận–trả, định danh thiết bị vật lý, đơn nhiều dòng, đổi lịch, kiểm tình trạng, sửa chữa và quyết toán cọc nội bộ. | Mục tiêu phát triển hiện tại. [Đề án v2.0](docs/v2-product-design.md) |
-| v3.0 · Business Management Platform | Có thể mở rộng sang nhiều chi nhánh, quản lý khách và nhân viên, báo cáo kinh doanh và tích hợp dịch vụ. | Xem xét sau v2.0 khi có nhu cầu vận hành đã xác nhận. |
+Đích phát hành là một **Medium Business Application** cho một cửa hàng, dùng được từ đặt thuê đến quyết toán và báo cáo. Nền tảng v1.0 đã đóng băng ngày 22/11/2026. V2-M1 đã tích hợp vào `main`. [Phạm vi sản phẩm](docs/v2-product-design.md) · [Bằng chứng Base và V2-M1](docs/verification.md)
 
 ## Roadmap v2.0
 
-Các mốc dưới đây là thứ tự triển khai đề xuất. [Công việc hiện tại](PROJECT_PLAN.md) · [Tiêu chí v2.0 và quyết định cần duyệt](docs/v2-product-design.md)
+[Công việc hiện tại](PROJECT_PLAN.md) · [Quyết định trước V2-M2](docs/v2-product-design.md#quyết-định-trước-v2-m2)
 
-| Mốc | Phụ thuộc | Kết quả có thể duyệt |
+| Mốc | Phụ thuộc | Tiêu chí nghiệm thu |
 | --- | --- | --- |
-| V2-M1 · Tài sản và đơn nhiều dòng | Hải duyệt phạm vi mốc đầu. | Có hồ sơ từng thiết bị, đặt và hủy đơn nhiều dòng, lịch giữ toàn kỳ. Dữ liệu Base lên được schema mới. Đặt thiếu một dòng không thay đổi tồn của dòng khác. |
-| V2-M2 · Vận hành giao nhận | V2-M1 và duyệt chính sách đổi lịch, trả và xử lý sự cố. | Nhân viên chuẩn bị, giao, nhận từng món và xử lý đơn bị ảnh hưởng. Có yêu cầu đổi/gia hạn, cách ly hỏng và quy trình đưa thiết bị đã sửa về kho. |
-| V2-M3 · Cọc và quyết toán | V2-M2 và duyệt chính sách tiền. | Màn đơn và sổ tiền thể hiện số đã thu, phát sinh, hoàn, khấu trừ và số dư. Quyền phê duyệt và lịch sử điều chỉnh được kiểm chứng. |
-| V2-M4 · Pilot và phát hành | V2-M1–M3, duyệt chuyển dữ liệu và API. | Chạy trọn luồng tại một điểm nhận–trả. Diễn tập nâng dữ liệu và khôi phục, xác minh PostgreSQL, smoke, giao diện, CI đúng SHA và Hải duyệt phát hành. |
+| V2-M1 · Tài sản và đơn nhiều dòng | Base v1.0 và phạm vi M1 đã duyệt. | **Đã tích hợp.** Có mã kho, đặt và hủy nguyên đơn, giữ suốt kỳ, đổi cùng mẫu có lịch sử và nâng dữ liệu v1. [PR #5](https://github.com/haibadguy/camera-rental-qa-lab/pull/5) |
+| V2-M2 · Rental Operations | V2-M1 trên `main` và Hải duyệt chính sách M2. | Đổi/gia hạn qua kiểm lịch nguyên tử. Nhân viên chuẩn bị và ghi giao nhận theo mã kho, nhận trả từng phần, kiểm phụ kiện, thấy món còn thiếu hoặc trễ. Máy hỏng hoặc mất bị loại khỏi tồn khả dụng và đơn bị ảnh hưởng hiện trong hàng đợi. Có lịch sử cách ly, sửa và đưa máy đã đạt kiểm tra về kho. Quyền khách, nhân viên, quản lý và tranh chấp tồn được kiểm chứng. |
+| V2-M3 · Pricing & Finance | V2-M2 cung cấp kỳ cam kết và dữ liệu giao nhận, sự cố. Hải duyệt chính sách giá, cọc, phí, thu và hoàn. | Giá đã chốt truy được theo dòng. Sổ VND đối chiếu tiền thuê, cọc, khoản thu tại quầy, phí, khấu trừ, hoàn và số dư. Điều chỉnh có người duyệt, lý do và liên kết bản ghi gốc. Gửi lại thao tác không ghi tiền lần hai. |
+| V2-M4 · Management & Reporting | V2-M2 cung cấp dữ liệu kho và vận hành. V2-M3 cung cấp bút toán. Hải chốt định nghĩa chỉ số và quyền quản lý. | Màn quản lý lấy doanh thu, đơn hàng, thiết bị đang thuê và tỷ lệ sử dụng từ dữ liệu thật theo kỳ. Tổng đối chiếu được với bản ghi gốc. Danh mục lọc được theo thương hiệu. Kiểm kê phân biệt trong kho, đang thuê và cách ly, ghi chênh lệch cùng người xử lý. Nhật ký truy được thay đổi vận hành và tiền đã duyệt. |
+| V2-M5 · Product Polish & Release | V2-M2–M4 đạt nghiệm thu, Hải duyệt pilot và chuyển đổi dữ liệu/API. | Chạy trọn luồng tại một điểm nhận–trả từ đặt nhiều món đến quyết toán và báo cáo, kể cả trả một phần và sự cố. Hoàn thiện UI responsive cho khách, nhân viên và quản lý, kiểm quyền backend, diễn tập nâng và khôi phục dữ liệu, chạy PostgreSQL và smoke, CI xanh đúng SHA, bàn giao từ checkout sạch và Hải duyệt phát hành. |
 
 ## Base v1.0 milestones
 
