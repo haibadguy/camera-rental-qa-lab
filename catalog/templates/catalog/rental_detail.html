@@ -30,20 +30,25 @@
         {% if rental.cancellation_reason %}<div><dt>Lý do hủy</dt><dd>{{ rental.get_cancellation_reason_display }}</dd></div>{% endif %}
         {% if rental.picked_up_at %}<div><dt>Thời điểm bàn giao</dt><dd>{{ rental.picked_up_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
         {% if rental.returned_at %}<div><dt>Thời điểm trả</dt><dd>{{ rental.returned_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
+        {% if rental.closed_at %}<div><dt>Đóng có ngoại lệ</dt><dd>{{ rental.closed_at|date:'d/m/Y H:i' }}</dd></div>{% endif %}
+        {% if receipt.picked_up %}<div><dt>Đã nhận lại</dt><dd>{{ receipt.returned }}/{{ receipt.picked_up }} thiết bị{% if receipt.lost %} · {{ receipt.lost }} món đã xác nhận mất{% endif %}</dd></div>{% endif %}
       </dl>
       {% if not staff_view %}
         {% if rental.status == 'CONFIRMED' or rental.status == 'PICKED_UP' %}
           {% include "catalog/handoff_info.html" %}
         {% endif %}
       {% endif %}
-      {% if can_cancel or can_pick_up or can_mark_no_show or can_return %}
+      {% if can_cancel or can_pick_up or can_mark_no_show or can_return or show_operations or change_kind %}
         <div class="actions">
+          {% if change_kind %}<a class="button button-outline" href="{% url 'rental-change' rental.pk %}">{% if change_kind == 'EXTEND' %}Yêu cầu gia hạn{% else %}Yêu cầu đổi lịch{% endif %}</a>{% endif %}
+          {% if show_operations %}<a class="button" href="{% url 'operations-order' rental.pk %}">Mở giao nhận và đổi kỳ</a>{% endif %}
           {% if can_cancel %}<form method="post" action="{% url 'cancel-rental' rental.pk %}">{% csrf_token %}<button class="button-danger">Hủy đơn</button></form>{% endif %}
           {% if can_pick_up %}<form method="post" action="{% url 'pick-up-rental' rental.pk %}">{% csrf_token %}<button>Ghi nhận bàn giao</button></form>{% endif %}
           {% if can_mark_no_show %}<form method="post" action="{% url 'no-show-rental' rental.pk %}">{% csrf_token %}<button class="button-danger">Hủy vì khách không đến nhận</button></form>{% endif %}
           {% if can_return %}<form method="post" action="{% url 'return-rental' rental.pk %}">{% csrf_token %}<button>Ghi nhận trả</button></form>{% endif %}
         </div>
       {% endif %}
+      {% if requires_operations and not show_operations %}<p class="muted">Đơn này cần nhân viên có quyền giao nhận theo mã kho.</p>{% endif %}
     </section>
     <aside class="panel order-summary" aria-labelledby="payment-heading">
       <h2 id="payment-heading">Chi phí thuê</h2>
@@ -52,6 +57,20 @@
       </dl>
     </aside>
   </div>
+  {% if changes %}
+    <section class="panel order-panel" aria-labelledby="change-history-heading">
+      <h2 id="change-history-heading">Yêu cầu thay đổi kỳ thuê</h2>
+      <ul>
+        {% for change in changes %}
+          <li>
+            <strong>{{ change.get_kind_display }} · {{ change.get_status_display }}</strong>
+            <p>{{ change.pickup_date|date:"d/m/Y" }} – {{ change.return_date|date:"d/m/Y" }} · {{ change.quoted_total_vnd|vnd }}</p>
+            {% if change.reviewed_at %}<p class="muted">Đã xử lý {{ change.reviewed_at|date:"d/m/Y H:i" }}</p>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
   {% if staff_view %}
     <section class="panel order-panel" aria-labelledby="asset-history-heading">
       <h2 id="asset-history-heading">Mã kho và lịch sử giữ</h2>

@@ -1,0 +1,68 @@
+{% extends "catalog/base.html" %}
+{% block title %}Hồ sơ thiết bị #{{ case.pk }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'maintenance-list' %}">Bảo trì và sự cố</a></nav>
+  <div class="page-heading">
+    <div>
+      <h1>{{ case.asset.code }}</h1>
+      <p class="muted">{{ case.asset.equipment.name }} · {{ case.get_kind_display }}</p>
+    </div>
+    <span class="status">{{ case.get_state_display }}</span>
+  </div>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="order-layout">
+    <section class="panel order-panel" aria-labelledby="case-info">
+      <h2 id="case-info">Hồ sơ #{{ case.pk }}</h2>
+      <dl class="details order-details">
+        <div><dt>Ghi nhận</dt><dd>{{ case.reported_at|date:"d/m/Y H:i" }}{% if case.reported_by %} · {{ case.reported_by.get_username }}{% endif %}</dd></div>
+        <div><dt>Tình trạng kho</dt><dd>{{ case.asset.get_status_display }}</dd></div>
+        <div><dt>Ghi chú</dt><dd class="multiline">{{ case.notes }}</dd></div>
+        {% if case.handover %}
+          <div><dt>Đơn liên quan</dt><dd><a href="{% url 'operations-order' case.handover.reservation.line.rental_id %}">Đơn #{{ case.handover.reservation.line.rental_id }}</a></dd></div>
+        {% endif %}
+        {% if case.reservation %}
+          <div><dt>Lịch bảo trì</dt><dd>{{ case.reservation.period.lower|date:"d/m/Y" }} – {{ case.reservation.period.upper|date:"d/m/Y" }}</dd></div>
+        {% endif %}
+        {% if case.repaired_at %}
+          <div><dt>Ghi nhận sửa chữa</dt><dd>{{ case.repaired_at|date:"d/m/Y H:i" }}{% if case.repaired_by %} · {{ case.repaired_by.get_username }}{% endif %}</dd></div>
+          <div><dt>Ghi chú sửa chữa</dt><dd class="multiline">{{ case.repair_notes }}</dd></div>
+        {% endif %}
+        {% if case.resolved_at %}
+          <div><dt>Kết thúc</dt><dd>{{ case.resolved_at|date:"d/m/Y H:i" }}{% if case.resolved_by %} · {{ case.resolved_by.get_username }}{% endif %}</dd></div>
+          <div><dt>Quyết định</dt><dd>{{ case.get_resolution_display }}</dd></div>
+          <div><dt>Lý do</dt><dd class="multiline">{{ case.resolution_notes }}</dd></div>
+        {% endif %}
+      </dl>
+    </section>
+    {% if case.state != 'RESOLVED' %}
+      <aside class="panel order-summary" aria-labelledby="case-actions">
+        <h2 id="case-actions">Xử lý thiết bị</h2>
+        {% if case.state == 'OPEN' or case.state == 'PLANNED' %}
+          {% if case.kind != 'LOST' or case.handover.returned_at %}
+            <form method="post" class="operation-form">
+              {% csrf_token %}
+              <label for="repair-notes">Ghi chú sửa chữa</label>
+              <textarea id="repair-notes" name="notes" maxlength="2000" rows="2" required></textarea>
+              <button type="submit" name="action" value="repair" class="button-outline">Ghi nhận sửa chữa</button>
+            </form>
+          {% endif %}
+        {% endif %}
+        {% if can_manage %}
+          <form method="post" class="operation-form">
+            {% csrf_token %}
+            <label for="resolution">Quyết định quản lý</label>
+            <select id="resolution" name="resolution" required>
+              <option value="">Chọn cách xử lý</option>
+              {% for value, label in resolution_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+            <label for="resolution-notes">Lý do hoặc kết quả kiểm tra</label>
+            <textarea id="resolution-notes" name="notes" maxlength="2000" rows="2" required></textarea>
+            <button type="submit" name="action" value="resolve">Xác nhận xử lý</button>
+          </form>
+        {% else %}
+          <p class="muted">Quản lý xác nhận quyết định đưa thiết bị về kho hoặc ngừng sử dụng.</p>
+        {% endif %}
+      </aside>
+    {% endif %}
+  </div>
+{% endblock %}

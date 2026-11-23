@@ -116,10 +116,22 @@ def equipment_with_physical_stock():
         .values("count")
     )
     legacy_counts = (
-        Rental.objects.filter(_checked_out_filter("status"), equipment_id=OuterRef("pk"))
+        Rental.objects.filter(
+            _checked_out_filter("status"), equipment_id=OuterRef("pk")
+        )
         .order_by()
         .values("equipment_id")
         .annotate(count=Sum("quantity"))
+        .values("count")
+    )
+    ready_counts = (
+        AssetUnit.objects.filter(
+            equipment_id=OuterRef("pk"), status=AssetUnit.Status.READY
+        )
+        .exclude(pk__in=checked_out_assets().values("asset_id"))
+        .order_by()
+        .values("equipment_id")
+        .annotate(count=Count("pk"))
         .values("count")
     )
     return (
@@ -133,7 +145,13 @@ def equipment_with_physical_stock():
                 0,
             ),
         )
-        .annotate(available_now=F("total_stock") - F("outstanding"))
+        .annotate(
+            available_now=Case(
+                When(tracks_assets=True, then=Coalesce(Subquery(ready_counts), 0)),
+                default=F("total_stock") - F("outstanding"),
+                output_field=IntegerField(),
+            )
+        )
         .order_by("code")
     )
 
@@ -149,18 +167,30 @@ def minimum_stock(equipment, today):
 def checked_out_assets():
     return AssetReservation.objects.filter(
         released_at__isnull=True, line__rental__status=Rental.Status.PICKED_UP
+    ).filter(
+        Q(handover__isnull=True)
+        | Q(
+            handover__picked_up_at__isnull=False,
+            handover__returned_at__isnull=True,
+            handover__lost_at__isnull=True,
+        )
     )
 
 
-def free_assets(equipment_ids, pickup_date, return_date):
+def free_assets(equipment_ids, pickup_date, return_date, *, exclude_rental_id=None):
     conflicts = AssetReservation.objects.filter(
         released_at__isnull=True, period__overlap=(pickup_date, return_date)
     )
     overdue = checked_out_assets().filter(
         line__rental__return_date__lte=timezone.localdate()
     )
+    if exclude_rental_id is not None:
+        conflicts = conflicts.exclude(line__rental_id=exclude_rental_id)
+        overdue = overdue.exclude(line__rental_id=exclude_rental_id)
     return (
-        AssetUnit.objects.filter(equipment_id__in=equipment_ids)
+        AssetUnit.objects.filter(
+            equipment_id__in=equipment_ids, status=AssetUnit.Status.READY
+        )
         .exclude(pk__in=conflicts.values("asset_id"))
         .exclude(pk__in=overdue.values("asset_id"))
     )
@@ -186,7 +216,9 @@ def unassigned_legacy_rentals(equipment):
 def asset_calendar(equipment):
     return (
         AssetReservation.objects.filter(asset__equipment=equipment)
-        .select_related("asset", "line__rental", "changed_by", "replaces__asset")
+        .select_related(
+            "asset", "line__rental", "changed_by", "replaces__asset", "maintenance"
+        )
         .order_by("-period", "asset__code")
     )
 

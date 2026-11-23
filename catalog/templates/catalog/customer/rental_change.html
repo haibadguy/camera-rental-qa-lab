@@ -1,0 +1,51 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}{% if extending %}Gia hạn{% else %}Đổi kỳ thuê{% endif %} · Đơn #{{ rental.pk }}{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn">
+    <a href="{% url 'my-rentals' %}">Đơn của tôi</a>
+    <span aria-hidden="true">/</span>
+    <a href="{% url 'rental-detail' rental.pk %}">Đơn #{{ rental.pk }}</a>
+  </nav>
+  <div class="page-heading">
+    <h1>{% if extending %}Gia hạn{% else %}Đổi kỳ thuê{% endif %}</h1>
+  </div>
+  <div class="order-layout">
+    <section class="panel order-panel" aria-labelledby="new-period">
+      <h2 id="new-period">Kỳ thuê đề nghị</h2>
+      {% if quote %}
+        <dl class="details order-details">
+          <div><dt>Ngày nhận</dt><dd>{{ period.pickup_date|date:"d/m/Y" }}</dd></div>
+          <div><dt>Ngày trả</dt><dd>{{ period.return_date|date:"d/m/Y" }}</dd></div>
+          <div><dt>Tiền thuê hiện tại</dt><dd>{{ quote.old_total_vnd|vnd }}</dd></div>
+          <div><dt>Tiền thuê sau thay đổi</dt><dd>{{ quote.total_vnd|vnd }}</dd></div>
+        </dl>
+        <p class="muted">Nhân viên sẽ kiểm lại lịch trước khi duyệt yêu cầu.</p>
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <input type="hidden" name="kind" value="{{ period.kind }}">
+          <input type="hidden" name="pickup_date" value="{{ period.pickup_date|date:'Y-m-d' }}">
+          <input type="hidden" name="return_date" value="{{ period.return_date|date:'Y-m-d' }}">
+          <input type="hidden" name="accepted_total_vnd" value="{{ quote.total_vnd|stringformat:'d' }}">
+          <button name="action" value="send">{% if quote.consent_required %}Đồng ý mức giá và gửi yêu cầu{% else %}Gửi yêu cầu{% endif %}</button>
+          <a class="button button-outline" href="{% url 'rental-change' rental.pk %}">Chọn lại ngày</a>
+        </form>
+      {% else %}
+        <form method="post" class="period-form">
+          {% csrf_token %}
+          {% if immutable_pickup %}<p>Ngày nhận {{ immutable_pickup|date:"d/m/Y" }}</p>{% endif %}
+          {{ form.as_p }}
+          <div class="actions">
+            <button name="action" value="quote">Xem tiền thuê đề nghị</button>
+            <a class="button button-outline" href="{% url 'rental-detail' rental.pk %}">Về đơn thuê</a>
+          </div>
+        </form>
+      {% endif %}
+    </section>
+    <aside class="panel order-summary">
+      <h2>Kỳ thuê hiện tại</h2>
+      <p>{{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</p>
+      <p>{{ rental.total_vnd|vnd }}</p>
+    </aside>
+  </div>
+{% endblock %}

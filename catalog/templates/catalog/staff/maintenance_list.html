@@ -1,0 +1,35 @@
+{% extends "catalog/base.html" %}
+{% block title %}Bảo trì và sự cố | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'operations-queue' %}">Vận hành thuê</a></nav>
+  <div class="page-heading">
+    <h1>Bảo trì và sự cố</h1>
+    <div class="action-row">
+      <a class="button button-outline" href="{% url 'maintenance-plan' %}">Đặt lịch bảo trì</a>
+      <a class="button" href="{% url 'maintenance-report' %}">Ghi sự cố</a>
+    </div>
+  </div>
+  <ul class="workspace-rows">
+    {% for case in page %}
+      <li class="panel workspace-row operation-queue-row">
+        <div>
+          <h2><a class="row-link" href="{% url 'maintenance-detail' case.pk %}">{{ case.asset.code }} · {{ case.get_kind_display }}</a></h2>
+          <p class="muted">{{ case.asset.equipment.name }}</p>
+        </div>
+        <div>
+          <span class="status">{{ case.get_state_display }}</span>
+          <p class="muted">{{ case.reported_at|date:"d/m/Y H:i" }}</p>
+        </div>
+      </li>
+    {% empty %}
+      <li class="panel empty-state">Chưa có hồ sơ bảo trì hoặc sự cố.</li>
+    {% endfor %}
+  </ul>
+  {% if page.has_other_pages %}
+    <nav class="actions" aria-label="Trang hồ sơ thiết bị">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Trang trước</a>{% endif %}
+      <span>Trang {{ page.number }} / {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Trang sau</a>{% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

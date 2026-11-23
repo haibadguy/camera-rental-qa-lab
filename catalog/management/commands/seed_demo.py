@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -8,6 +9,7 @@ from django.utils import timezone
 
 from catalog.inventory import free_assets
 from catalog.models import AssetReservation, Equipment, Rental, RentalLine
+from catalog.roles import OPERATOR_GROUP
 from catalog.services import checked_out_quantity
 
 
@@ -31,6 +33,8 @@ class Command(BaseCommand):
                 continue
             user.set_password("camera-demo-2026")
             user.save(update_fields=["password"])
+            if is_staff:
+                user.groups.add(Group.objects.get(name=OPERATOR_GROUP))
 
             if username == "demo-a":
                 now = timezone.now()
