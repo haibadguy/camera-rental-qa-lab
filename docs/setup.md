@@ -49,7 +49,7 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 .\scripts\dev.ps1 -Action Verify -Port 8010
 ```
 
-`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Bộ test kiểm tra hai ca đồng thời và bảo toàn lịch sử khi nâng schema từ `catalog.0002`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
+`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Bộ test có ba ca đồng thời gồm đặt đơn Base, bàn giao và đặt nhiều SKU. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002` và `catalog.0004`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
 
 Để xác minh ứng viên, dùng checkout sạch của SHA đã chọn và chạy từ thư mục gốc của checkout đó. Ghi SHA vào kết quả. Có thể thêm `-Project camera-base-rc` để phân biệt nhóm kiểm tra, script vẫn tự thêm hậu tố riêng vào tên project.
 

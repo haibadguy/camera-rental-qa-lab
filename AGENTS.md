@@ -13,9 +13,9 @@ Follow [ROADMAP.md](ROADMAP.md) for V2-M2 through V2-M5 and release gates. Use [
 ## Architecture constraints
 - Retain Django, Django Templates and JavaScript, DRF, PostgreSQL, Docker Compose and GitHub Actions.
 - Keep a modular monolith. Keep the `catalog` Django app label and migrations stable unless change is demonstrably safe and explicitly approved.
-- Give each domain rule one authoritative implementation. Views/API are adapters; use shared domain services. Avoid circular dependencies and speculative abstractions.
-- Use `catalog/services.py` as the shared entry point for web and API. Implement equipment and list prices in `catalog/equipment.py`, stock rules in `catalog/inventory.py`, and booking and rental transitions in `catalog/rentals.py`. Keep registration in `catalog/views.py` using Django auth.
-- Do not move ORM models between Django apps casually. Do not rewrite a working module for style alone.
+- Give each domain rule one owner. Views and API are adapters. Use explicit calls between domain functions and keep dependencies acyclic.
+- Use `catalog/services.py` as the shared web and API entry point. Keep rule implementations in their owning modules. Start with the current Equipment, Inventory and Rentals modules. Keep registration on Django auth.
+- Keep ORM models and migrations in `catalog`. Create a domain or adapter package when a milestone introduces a concrete responsibility that benefits from the split. Any move must preserve caller contracts and be independently verifiable. [Target architecture](docs/architecture.md#kiến-trúc-mục-tiêu)
 
 ## Business invariants
 - Dates: start-inclusive, end-exclusive; 1–30 days; no past start; Asia/Ho_Chi_Minh.
