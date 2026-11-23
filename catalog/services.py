@@ -9,6 +9,14 @@ from .equipment import (
     update_equipment,
 )
 from .errors import RentalError
+from .finance import (
+    finance_summary,
+    finance_workspace,
+    post_finance_entry,
+    propose_finance_charge,
+    review_finance_charge,
+    set_equipment_deposit,
+)
 from .inventory import (
     MAX_RENTAL_DAYS,
     asset_calendar,
@@ -47,7 +55,7 @@ from .rentals import (
     return_rental,
     staff_rentals,
 )
-from .roles import can_manage, can_operate
+from .roles import can_manage, can_manage_finance, can_operate, can_record_finance
 from .schedule_changes import (
     change_kind,
     preview_rental_change,
@@ -67,9 +75,11 @@ __all__ = [
     "book_rental",
     "can_cancel",
     "can_manage",
+    "can_manage_finance",
     "can_mark_no_show",
     "can_operate",
     "can_pick_up",
+    "can_record_finance",
     "can_replace_asset",
     "can_return",
     "cancel_rental",
@@ -81,14 +91,18 @@ __all__ = [
     "customer_rentals",
     "enable_asset_tracking",
     "equipment_with_physical_stock",
+    "finance_summary",
+    "finance_workspace",
     "inspect_asset",
     "maintenance_cases",
     "mark_no_show",
     "ops_rentals",
     "pick_up_rental",
     "plan_maintenance",
+    "post_finance_entry",
     "prepare_asset",
     "preview_rental_change",
+    "propose_finance_charge",
     "receipt_summary",
     "receive_asset",
     "register_asset",
@@ -99,7 +113,9 @@ __all__ = [
     "request_rental_change",
     "resolve_case",
     "return_rental",
+    "review_finance_charge",
     "review_rental_change",
+    "set_equipment_deposit",
     "staff_rentals",
     "start_repair",
     "unassigned_legacy_rentals",

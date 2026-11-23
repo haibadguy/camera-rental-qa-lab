@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 from . import services
 from .models import AssetUnit, Equipment, Rental
 from .roles import MANAGER_GROUP, OPERATOR_GROUP
+from .test_finance import fund_rental
 
 
 class OperationsAdapterTests(TestCase):
@@ -66,6 +67,7 @@ class OperationsAdapterTests(TestCase):
             )
             self.assertRedirects(response, staff_url)
         pickup_url = reverse("api-operations-pick-up", args=[order_id])
+        fund_rental(order, self.operator)
         self.assertEqual(
             self.api.post(pickup_url).data["status"], Rental.Status.PICKED_UP
         )

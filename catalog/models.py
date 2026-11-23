@@ -13,6 +13,7 @@ class Equipment(models.Model):
     code = models.CharField(max_length=32, unique=True)
     name = models.CharField(max_length=160)
     daily_rate_vnd = models.PositiveIntegerField()
+    deposit_vnd = models.PositiveIntegerField(default=0)
     total_stock = models.PositiveIntegerField()
     kind = models.CharField(max_length=6, choices=Kind.choices, default=Kind.CAMERA)
     specifications = models.TextField(blank=True, max_length=1000)
@@ -48,6 +49,7 @@ class Rental(models.Model):
     quantity = models.PositiveIntegerField(null=True)
     daily_rate_vnd = models.PositiveIntegerField(null=True)
     total_vnd = models.DecimalField(max_digits=26, decimal_places=0)
+    finance_enabled = models.BooleanField(default=False)
     status = models.CharField(
         max_length=9, choices=Status.choices, default=Status.CONFIRMED
     )
@@ -77,6 +79,8 @@ class Rental(models.Model):
         permissions = [
             ("operate_rentals", "Can perform rental operations"),
             ("manage_rental_incidents", "Can resolve rental incidents"),
+            ("record_rental_finance", "Can record rental receipts and refunds"),
+            ("manage_rental_finance", "Can approve rental finance decisions"),
         ]
         indexes = [
             models.Index(
@@ -175,6 +179,7 @@ class RentalLine(models.Model):
     equipment = models.ForeignKey(Equipment, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     daily_rate_vnd = models.PositiveIntegerField()
+    deposit_vnd = models.PositiveIntegerField(default=0)
     total_vnd = models.DecimalField(max_digits=26, decimal_places=0)
 
     class Meta:
@@ -397,5 +402,163 @@ class MaintenanceCase(models.Model):
                 fields=["asset"],
                 condition=~models.Q(kind="PLANNED") & ~models.Q(state="RESOLVED"),
                 name="asset_one_open_unplanned_incident",
+            ),
+        ]
+
+
+class FinanceCharge(models.Model):
+    class Reason(models.TextChoices):
+        LATE = "LATE", "Trả trễ"
+        DAMAGE = "DAMAGE", "Hư hỏng"
+        LOST = "LOST", "Mất thiết bị"
+        MISSING_ACCESSORY = "MISSING_ACCESSORY", "Thiếu phụ kiện"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Chờ duyệt"
+        APPROVED = "APPROVED", "Đã duyệt"
+        REJECTED = "REJECTED", "Từ chối"
+
+    rental = models.ForeignKey(
+        Rental, on_delete=models.PROTECT, related_name="finance_charges"
+    )
+    handover = models.ForeignKey(
+        AssetHandover, on_delete=models.PROTECT, null=True, blank=True
+    )
+    incident = models.ForeignKey(
+        MaintenanceCase, on_delete=models.PROTECT, null=True, blank=True
+    )
+    reason = models.CharField(max_length=24, choices=Reason.choices)
+    amount_vnd = models.DecimalField(max_digits=26, decimal_places=0)
+    notes = models.TextField(max_length=2000)
+    command_id = models.UUIDField()
+    proposed_at = models.DateTimeField(auto_now_add=True)
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    status = models.CharField(
+        max_length=8, choices=Status.choices, default=Status.PENDING
+    )
+    reviewed_at = models.DateTimeField(null=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name="+"
+    )
+    review_note = models.TextField(max_length=2000, blank=True)
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount_vnd__gt=0), name="finance_charge_positive"
+            ),
+            models.UniqueConstraint(
+                fields=["rental", "command_id"], name="finance_charge_command_unique"
+            ),
+            models.UniqueConstraint(
+                fields=["rental", "handover", "reason"],
+                condition=models.Q(status__in=["PENDING", "APPROVED"]),
+                nulls_distinct=False,
+                name="finance_charge_source_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status="PENDING", reviewed_at__isnull=True, reviewed_by__isnull=True
+                )
+                | models.Q(
+                    status__in=["APPROVED", "REJECTED"],
+                    reviewed_at__isnull=False,
+                    reviewed_by__isnull=False,
+                ),
+                name="finance_charge_review_state",
+            ),
+        ]
+
+
+class FinanceEntry(models.Model):
+    class Kind(models.TextChoices):
+        RENT_RECEIPT = "RENT_RECEIPT", "Thu tiền thuê / phí"
+        DEPOSIT_RECEIPT = "DEPOSIT_RECEIPT", "Thu cọc"
+        RENT_REFUND = "RENT_REFUND", "Hoàn tiền thuê / phí"
+        DEPOSIT_REFUND = "DEPOSIT_REFUND", "Hoàn cọc"
+        DEPOSIT_APPLIED = "DEPOSIT_APPLIED", "Khấu trừ cọc"
+        WAIVER = "WAIVER", "Miễn khoản thu"
+        REVERSAL = "REVERSAL", "Đảo giao dịch"
+        RECONCILIATION = "RECONCILIATION", "Đối soát đơn cũ"
+
+    class Method(models.TextChoices):
+        CASH = "CASH", "Tiền mặt"
+        TRANSFER = "TRANSFER", "Chuyển khoản"
+
+    rental = models.ForeignKey(
+        Rental, on_delete=models.PROTECT, related_name="finance_entries"
+    )
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    amount_vnd = models.DecimalField(max_digits=26, decimal_places=0)
+    method = models.CharField(max_length=8, choices=Method.choices, blank=True)
+    notes = models.TextField(max_length=2000, blank=True)
+    charge = models.ForeignKey(
+        FinanceCharge, on_delete=models.PROTECT, null=True, blank=True
+    )
+    reverses = models.OneToOneField(
+        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="reversal"
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    command_id = models.UUIDField()
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["rental", "command_id"], name="finance_entry_command_unique"
+            ),
+            models.UniqueConstraint(
+                fields=["rental"],
+                condition=models.Q(kind="RECONCILIATION"),
+                name="finance_one_reconciliation",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind="RECONCILIATION", amount_vnd=0)
+                | (~models.Q(kind="RECONCILIATION") & models.Q(amount_vnd__gt=0)),
+                name="finance_entry_amount_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind="REVERSAL", reverses__isnull=False)
+                | (~models.Q(kind="REVERSAL") & models.Q(reverses__isnull=True)),
+                name="finance_entry_reversal_link",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    kind__in=["WAIVER", "DEPOSIT_APPLIED"], charge__isnull=False
+                )
+                | (
+                    ~models.Q(kind__in=["WAIVER", "DEPOSIT_APPLIED"])
+                    & models.Q(charge__isnull=True)
+                ),
+                name="finance_entry_charge_link",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    kind__in=[
+                        "RENT_RECEIPT",
+                        "DEPOSIT_RECEIPT",
+                        "RENT_REFUND",
+                        "DEPOSIT_REFUND",
+                    ],
+                    method__in=["CASH", "TRANSFER"],
+                )
+                | (
+                    ~models.Q(
+                        kind__in=[
+                            "RENT_RECEIPT",
+                            "DEPOSIT_RECEIPT",
+                            "RENT_REFUND",
+                            "DEPOSIT_REFUND",
+                        ]
+                    )
+                    & models.Q(method="")
+                ),
+                name="finance_entry_method_valid",
             ),
         ]

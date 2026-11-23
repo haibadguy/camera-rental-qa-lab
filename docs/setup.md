@@ -96,3 +96,16 @@ docker compose exec web python manage.py set_rental_role <staff-username> manage
 ```
 
 Quản lý có quyền vận hành và thêm quyền kết thúc hồ sơ bảo trì, mở lại tồn hoặc xác nhận mất. Quyền thao tác cũ trên đơn Base vẫn dùng `is_staff`. [Hợp đồng Web/API](architecture.md#v2-m2--vận-hành-thuê)
+
+## V2-M3 · Quyền quyết toán
+
+`migrate` tạo nhóm `Rental Finance Clerks` và `Rental Finance Managers`. Cấp quyền tài chính cho tài khoản nhân viên theo phân công. Có thể gán cả vai trò vận hành và vai trò quyết toán cho cùng tài khoản.
+
+```powershell
+docker compose exec web python manage.py set_rental_role demo-staff finance-clerk
+docker compose exec web python manage.py set_rental_role '<ten-quan-ly>' finance-manager
+```
+
+Tài khoản `demo-staff` mới đã có quyền ghi thu và hoàn. Với tài khoản demo đã tồn tại từ trước, dùng lệnh cấp quyền ở trên. Quản lý chỉnh cọc ở **Kho thiết bị** và duyệt phí, miễn hoặc khấu trừ tại **Quyết toán tại quầy** trên đơn. Nhân viên ghi tiền mặt hoặc chuyển khoản khi thực thu hoặc thực hoàn. Khoản thu cũ cần chứng từ và quản lý xác nhận trước khi đối soát.
+
+Migration `0007` chặn hạ cấp khi có sổ tiền, đơn mới theo V2-M3 hoặc cấu hình cọc. Diễn tập phương án khôi phục trên bản sao trước khi nâng dữ liệu thật. [Hợp đồng Web/API](architecture.md#v2-m3--quyết-toán-tại-quầy)

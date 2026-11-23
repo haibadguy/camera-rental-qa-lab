@@ -207,6 +207,7 @@ def _rental_detail(request, rental, *, staff=False, error=None):
     else:
         context["change_kind"] = services.change_kind(rental)
         context["changes"] = rental.changes.all()
+        context["finance"] = services.finance_summary(rental)
         if rental.picked_up_at:
             context["receipt"] = services.receipt_summary(rental)
     return render(

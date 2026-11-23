@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from .custody import confirm_asset_pickup, lock_rental
 from .errors import RentalError
+from .finance import require_payment_before_pickup
 from .inventory import (
     available_stock,
     checked_out_quantity,
@@ -103,6 +104,7 @@ def book_order(customer, pickup_date, return_date, lines, *, require_assets=True
                 equipment=item,
                 quantity=quantity,
                 daily_rate_vnd=item.daily_rate_vnd,
+                deposit_vnd=item.deposit_vnd,
                 total_vnd=days * quantity * item.daily_rate_vnd,
             )
         )
@@ -120,6 +122,7 @@ def book_order(customer, pickup_date, return_date, lines, *, require_assets=True
         pickup_date=pickup_date,
         return_date=return_date,
         total_vnd=sum(line.total_vnd for line in rental_lines),
+        finance_enabled=True,
         **projection,
     )
     for line in rental_lines:
@@ -202,6 +205,7 @@ def pick_up_rental(staff, rental_id, *, legacy_only=False):
         raise RentalError(
             "Không đủ thiết bị thực tế để bàn giao. Kiểm tra các đơn chưa trả.", 409
         )
+    require_payment_before_pickup(rental)
     rental.status = Rental.Status.PICKED_UP
     rental.picked_up_at = now
     rental.save(update_fields=["status", "picked_up_at"])

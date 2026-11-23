@@ -26,6 +26,9 @@
         <div class="actions">
           <a class="button button-outline button-small" href="{% url 'staff-assets' item.pk %}">Mã kho và lịch giữ</a>
           <a class="button button-outline button-small" href="{% url 'edit-equipment' item.pk %}">Sửa thiết bị <span aria-hidden="true">↗</span></a>
+          {% if perms.catalog.manage_rental_finance %}
+            <a class="button button-outline button-small" href="{% url 'finance-deposit' item.pk %}">Cọc mỗi thiết bị · {{ item.deposit_vnd|vnd }}</a>
+          {% endif %}
         </div>
       </li>
     {% empty %}

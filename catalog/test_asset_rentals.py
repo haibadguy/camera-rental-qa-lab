@@ -20,6 +20,7 @@ from .models import (
     RentalLine,
 )
 from .roles import OPERATOR_GROUP
+from .test_finance import fund_rental
 
 
 class AssetRentalTests(TestCase):
@@ -203,6 +204,7 @@ class AssetRentalTests(TestCase):
         )
         hold = AssetReservation.objects.get(line__rental=first)
         handover = services.prepare_asset(self.staff, first.pk, hold.pk)
+        fund_rental(first, self.staff)
         services.pick_up_rental(self.staff, first.pk)
         # Transfer the scenario to the next day without rewriting the stored periods.
         with (

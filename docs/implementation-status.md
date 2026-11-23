@@ -1,8 +1,12 @@
 # Trạng thái thực thi Camera Rental
 
-## V2-M2 · Nhánh ứng viên
+## V2-M3 · Quyết toán tại quầy
 
-`feature/v2-m2` đã hợp nhất giao nhận theo mã kho, đổi kỳ, bảo trì và phân quyền vận hành. Đã qua kiểm chứng local và sẵn sàng cho review PR. CI của nhánh sẽ chạy sau khi Hải duyệt push. [Bằng chứng theo SHA](verification.md#v2-m2--24112026)
+`feature/v2-m3` có cấu hình cọc theo mẫu, chốt cọc theo dòng, sổ thu/hoàn, duyệt và khấu trừ phí, liên kết giao dịch đảo và đối soát chứng từ cũ. Đơn mới kiểm đủ tiền trước khi bàn giao trên Web và API. [Chính sách đã duyệt](v2-product-design.md#quyết-định-trước-v2-m3) · [Kiến trúc](architecture.md#v2-m3--quyết-toán-tại-quầy)
+
+## V2-M2 · Đã tích hợp
+
+PR #6 đưa giao nhận theo mã kho, đổi kỳ, bảo trì và phân quyền vận hành vào `main` tại `277f5c0`. CI sau merge đạt. [PR #6](https://github.com/haibadguy/camera-rental-qa-lab/pull/6) · [Bằng chứng theo SHA](verification.md#ci-v2-m2-trên-github)
 
 | Nguồn | Phần hợp nhất |
 | --- | --- |
@@ -20,5 +24,3 @@ V2-M1 đã tích hợp tại `9f7e3f5` với giữ lịch theo mã kho và đơn
 Base v1.0 đã đóng băng sau khi đạt G0–G4. Tag `v1.0.0-qa-baseline` trỏ đến `31ca8a0d282ae1e29017d7f3e6ab0f7973d27fee`. [Bằng chứng phát hành](verification.md) · [GitHub Release](https://github.com/haibadguy/camera-rental-qa-lab/releases/tag/v1.0.0-qa-baseline)
 
 Bản sửa thông báo mật khẩu R08 sau đóng băng đã vào `main` ở `b334418` và có CI xanh. [PR #3](https://github.com/haibadguy/camera-rental-qa-lab/pull/3) · [CI sau bản sửa](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45027902369)
-
-Mục tiêu phát triển tiếp theo là v2.0 Complete Rental Operations. [Công việc hiện tại](../PROJECT_PLAN.md) · [Đề án v2.0](v2-product-design.md)

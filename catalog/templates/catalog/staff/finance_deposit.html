@@ -1,0 +1,17 @@
+{% extends "catalog/base.html" %}
+{% block title %}Cấu hình cọc {{ equipment.code }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'staff-equipment' %}">Kho thiết bị</a></nav>
+  <div class="page-heading">
+    <div><h1>Cọc bảo đảm</h1><p class="muted">{{ equipment.code }} · {{ equipment.name }}</p></div>
+  </div>
+  <form class="panel form-panel operation-form" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <p class="muted">Mức cọc áp dụng cho đơn đặt sau khi lưu.</p>
+    <div class="actions">
+      <button type="submit">Lưu mức cọc</button>
+      <a class="button button-outline" href="{% url 'staff-equipment' %}">Về kho thiết bị</a>
+    </div>
+  </form>
+{% endblock %}

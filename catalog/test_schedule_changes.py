@@ -25,6 +25,7 @@ from .schedule_changes import (
     review_rental_change,
 )
 from .services import pick_up_rental, prepare_asset, receive_asset
+from .test_finance import fund_rental
 
 
 def operator():
@@ -188,6 +189,7 @@ class RentalChangeTests(TestCase):
         )
         for hold in holds:
             prepare_asset(self.staff, self.rental.pk, hold.pk)
+        fund_rental(self.rental, self.staff)
         pick_up_rental(self.staff, self.rental.pk)
         first_handover = AssetHandover.objects.get(reservation=holds[0])
         actual_pickup = first_handover.picked_up_at

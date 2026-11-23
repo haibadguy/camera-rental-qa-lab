@@ -2,7 +2,7 @@
 
 ## V2-M2 · 24/11/2026
 
-**Pass local, sẵn sàng cho review PR.** Bản runtime `376ddf9bc1a771aae46419f75e684089afe7cd91` được dựng từ `git archive`. SHA-256 của 36 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19. Project `camera-v2-m2-review-08b87860` chạy cổng 18049 trên volume mới.
+**Pass local.** Bản runtime `376ddf9bc1a771aae46419f75e684089afe7cd91` được dựng từ `git archive`. SHA-256 của 36 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19. Project `camera-v2-m2-review-08b87860` chạy cổng 18049 trên volume mới.
 
 | Kiểm tra | Kết quả |
 | --- | --- |
@@ -11,7 +11,6 @@
 | Tranh chấp PostgreSQL | **Pass**, chạy riêng 5/5 trong 1,016 giây. Đặt một SKU, đặt nhiều SKU theo thứ tự ngược, bàn giao đồng thời, đặt cạnh đổi kỳ và đặt cạnh bảo trì. |
 | HTTP smoke | **Pass**. Đăng ký, đăng nhập, tra tồn, đặt, chuẩn bị và giao theo mã kho, nhận trả sớm, kiểm tra và hủy. API v1 trả `409` khi cố trả nguyên đơn đã giao theo mã kho. Đơn nhiều SKU qua Web được báo giá lại, phê duyệt qua API v2, hiện trên lịch kho và hủy cả đơn. |
 | Chrome headless | **Pass** ở 1440 × 1000, 390 × 844 và 320 × 780. Dùng hai mã kho cho mỗi SKU kiểm thử `V2UI-1440`, `V2UI-390`, `V2UI-320`. Khách đặt và yêu cầu đổi lịch, nhân viên duyệt rồi chuẩn bị, giao và nhận từng món, kiểm hư hỏng, ghi sửa, lên lịch bảo trì. Quản lý mở lại tồn. Khách thấy 1/2 rồi 2/2 món đã nhận. Ba đơn #5–#7 có kỳ sau đổi là 24–26/11/2026. Đã xem ảnh màn báo giá, hàng đợi, giao nhận và quyết định quản lý. Không tràn ngang, lỗi JS hoặc HTTP 5xx trong luồng đã chạy. |
-| GitHub Actions | **Not Run**. Nhánh local chờ duyệt push. |
 
 Chạy từ archive của SHA trên. Override IPAM tạm ở ngoài repo dùng subnet `10.250.49.0/24` sau khi đối chiếu các mạng Compose có sẵn.
 
@@ -24,6 +23,11 @@ docker exec camera-v2-m2-review-08b87860-web-1 python manage.py test catalog.tes
 Để lặp lượt trình duyệt trên máy đã kiểm chứng, dùng fixture `browser_fixture.py` và script `v2-m2-review.cjs` trong thư mục tạm `camera-v2-m2-browser-review`. Fixture thêm một tài khoản kiểm thử và ba SKU biệt lập. Quyền manager cấp qua `set_rental_role`. Script chạy với `CAMERA_M2_URL=http://127.0.0.1:18049` và `CAMERA_M2_PLAYWRIGHT` trỏ đến Playwright Core cài local.
 
 Lượt đầu đạt 50 test nhưng smoke còn theo quy trình bàn giao cũ. Một lượt dựng sau đó gặp lỗi Docker dừng với exit 137. Bản archive `a21c575` phát hiện thiếu auth context processor, làm ẩn liên kết vận hành và bảo trì trên Web. Đã sửa và chạy lại toàn bộ trên project mới. Các volume cũ được giữ.
+
+### CI V2-M2 trên GitHub
+
+- **Nhánh tính năng · Pass.** Run push trên `feature/v2-m2` đạt ở SHA `7657a3e092902f7dfde85ac406a3003a292f2f2a`. [GitHub Actions](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45259641984)
+- **Sau merge · Pass.** PR #6 vào `main` ngày 24/11/2026 tại `277f5c0b3fc354fb6da8c741725b3cae9b6e724e`. Run push trên cùng SHA đạt build, migrations, Django check, migration drift, suite PostgreSQL và HTTP smoke. [PR #6](https://github.com/haibadguy/camera-rental-qa-lab/pull/6) · [GitHub Actions trên main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45260369314)
 
 ## V2-M1 · 23/11/2026
 

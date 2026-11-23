@@ -24,6 +24,7 @@
                 <p class="code">{{ item.code }}</p>
                 <strong>{{ item.name }}</strong>
                 <p>{{ item.daily_rate_vnd|vnd }}/ngày</p>
+                {% if item.deposit_vnd %}<p class="muted">Cọc {{ item.deposit_vnd|vnd }}/thiết bị</p>{% endif %}
               </div>
               <div>{{ field.as_field_group }}</div>
             </li>

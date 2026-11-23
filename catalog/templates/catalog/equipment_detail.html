@@ -14,6 +14,7 @@
       <p class="code">{{ item.get_kind_display }} <span aria-hidden="true">/</span> {{ item.code }}</p>
       <h1>{{ item.name }}</h1>
       <p class="price price-large">{{ item.daily_rate_vnd|vnd }}<span class="price-unit">/ngày</span></p>
+      {% if item.deposit_vnd %}<p class="muted">Cọc bảo đảm {{ item.deposit_vnd|vnd }} mỗi thiết bị</p>{% endif %}
       <section class="panel product-booking" aria-labelledby="calendar-title">
         <h2 id="calendar-title">Kiểm tra lịch thuê</h2>
         <p class="muted">Thuê từ 1 đến {{ period_form.max_rental_days }} ngày. Ngày trả không tính tiền thuê.</p>

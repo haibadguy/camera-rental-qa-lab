@@ -15,6 +15,9 @@
     <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
   </div>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  {% if perms.catalog.record_rental_finance %}
+    <div class="actions"><a class="button button-outline" href="{% url 'finance-ledger' rental.pk %}">Quyết toán tại quầy</a></div>
+  {% endif %}
   <section class="operation-section" aria-labelledby="handover-heading">
     <h2 id="handover-heading">Thiết bị theo mã kho</h2>
     <ul class="workspace-rows">

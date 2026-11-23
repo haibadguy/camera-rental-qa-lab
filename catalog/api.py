@@ -51,6 +51,7 @@ class EquipmentSerializer(serializers.ModelSerializer):
             "kind",
             "specifications",
             "daily_rate_vnd",
+            "deposit_vnd",
             "available_stock",
         )
 

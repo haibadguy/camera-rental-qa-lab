@@ -98,6 +98,25 @@ def main():
         credentials=staff_credentials,
         expected=204,
     )
+    api.request(
+        f"{ops_url}pick-up/", payload={}, credentials=staff_credentials, expected=409
+    )
+    finance_entry = f"{ops_url}finance/entries/"
+    receipt = {
+        "kind": "RENT_RECEIPT",
+        "amount_vnd": rental["total_vnd"],
+        "method": "CASH",
+        "command_id": str(uuid4()),
+    }
+    api.request(finance_entry, payload=receipt, credentials=credentials, expected=403)
+    first = api.request(
+        finance_entry, payload=receipt, credentials=staff_credentials, expected=201
+    )
+    repeated = api.request(
+        finance_entry, payload=receipt, credentials=staff_credentials, expected=201
+    )
+    assert first["id"] == repeated["id"]
+    assert "Sổ giao dịch" in staff.request(f"/staff/rentals/{order}/finance/")
     assert "Đã bàn giao" in staff.request(
         f"/staff/rentals/{order}/operations/", form={"action": "pick_up"}
     )
@@ -137,13 +156,35 @@ def main():
         "/api/rentals/", payload=booking | future, credentials=credentials, expected=201
     )
     order = cancellable["id"]
+    entry_url = f"/api/v2/operations/rentals/{order}/finance/entries/"
+    paid = {
+        "kind": "RENT_RECEIPT",
+        "amount_vnd": 50_000,
+        "method": "CASH",
+        "command_id": str(uuid4()),
+    }
+    api.request(entry_url, payload=paid, credentials=staff_credentials, expected=201)
     assert "Đã hủy đơn thuê" in customer.request(f"/rentals/{order}/cancel/", form={})
     assert (
         api.request(f"/api/rentals/{order}/", credentials=credentials)["status"]
         == "CANCELLED"
     )
+    summary_url = f"/api/v2/rentals/{order}/finance/"
+    assert (
+        api.request(summary_url, credentials=credentials)["rent_to_refund_vnd"]
+        == "50000"
+    )
+    api.request(
+        entry_url,
+        payload=paid | {"kind": "RENT_REFUND", "command_id": str(uuid4())},
+        credentials=staff_credentials,
+        expected=201,
+    )
+    assert (
+        api.request(summary_url, credentials=credentials)["rent_to_refund_vnd"] == "0"
+    )
     print(
-        "PASS: live registration, authorization, availability, booking, per-asset pickup, early return, inspection and cancellation"
+        "PASS: live booking, finance authorization and retry, pickup, early return, inspection, cancellation and refund"
     )
 
     camera = api.request("/api/equipment/?search=CAM-001")[0]
