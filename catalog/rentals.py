@@ -234,7 +234,8 @@ def return_rental(staff, rental_id, *, legacy_only=False):
         reservation__line__rental=rental, picked_up_at__isnull=False
     ).exists():
         raise RentalError(
-            f"Đơn đã bàn giao theo mã kho. Ghi nhận từng món tại /staff/rentals/{rental.pk}/operations/ hoặc API v2.",
+            f"Đơn đã bàn giao theo mã kho. Ghi nhận từng món tại /staff/rentals/{rental.pk}/operations/ "
+            f"hoặc /api/v2/operations/rentals/{rental.pk}/.",
             409,
         )
     rental.status = Rental.Status.RETURNED
