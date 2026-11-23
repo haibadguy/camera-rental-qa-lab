@@ -7,8 +7,8 @@
 | Công việc | Trạng thái | Kết quả cần đạt |
 | --- | --- | --- |
 | V2-M1 · Tài sản và đơn nhiều dòng | Đã tích hợp và xác minh | PR #5 đã vào `main` tại `9f7e3f5`. Đặt và hủy nguyên đơn, giữ tài sản suốt kỳ, đổi cùng mẫu có lịch sử, backfill dữ liệu Base. [Hợp đồng hiện tại](docs/architecture.md#v2-m1--đặt-nhiều-thiết-bị) · [Bằng chứng V2-M1](docs/verification.md#ci-v2-m1-trên-github) |
-| Duyệt chính sách V2-M2 | Công việc tiếp theo · Chờ Hải | Chốt các mặc định về đổi/gia hạn, bàn giao, trả từng phần, trả trễ, sự cố và quyền vận hành. [Quyết định trước V2-M2](docs/v2-product-design.md#quyết-định-trước-v2-m2) |
-| V2-M2 · Rental Operations | Chưa bắt đầu | Triển khai sau khi duyệt chính sách. Đổi/gia hạn, giao nhận theo mã kho, kiểm tra, cách ly, bảo trì, xử lý đơn bị ảnh hưởng. [Tiêu chí nghiệm thu](ROADMAP.md#roadmap-v20) |
+| Chính sách V2-M2 | Hải đã duyệt ngày 23/11/2026 | Hạn trả, đổi/gia hạn, giao nhận từng món, sự cố và quyền vận hành. [Năm chính sách](docs/v2-product-design.md#quyết-định-trước-v2-m2) |
+| V2-M2 · Rental Operations | Đã hợp nhất trên `feature/v2-m2` | Đổi/gia hạn, giao nhận theo mã kho, kiểm tra, cách ly, bảo trì và hàng đợi đơn có nguy cơ thiếu thiết bị. Theo dõi kiểm chứng và trạng thái review cho bản local. [Tiêu chí nghiệm thu](ROADMAP.md#roadmap-v20) · [Trạng thái ứng viên](docs/implementation-status.md) |
 
 ## Base v1.0 · Technical Foundation
 

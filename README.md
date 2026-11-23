@@ -4,6 +4,8 @@ Camera Rental là ứng dụng quản lý cho thuê máy ảnh, ống kính và 
 
 V2-M1 đã tích hợp vào `main`. Khách có thể tra lịch và đặt nhiều mẫu trong cùng kỳ. Nhân viên xem lịch giữ theo mã kho, đổi tài sản cùng mẫu và bàn giao, nhận trả nguyên đơn. [Thiết lập local và tài khoản demo](docs/setup.md)
 
+Nhánh `feature/v2-m2` bổ sung đổi kỳ có phê duyệt, chuẩn bị và nhận trả theo mã kho, kiểm tra, cách ly và bảo trì. [Trạng thái ứng viên V2-M2](docs/implementation-status.md)
+
 | Bạn cần | Đọc |
 | --- | --- |
 | Biết mốc đang làm | [Kế hoạch phát triển](PROJECT_PLAN.md) |
@@ -14,4 +16,4 @@ V2-M1 đã tích hợp vào `main`. Khách có thể tra lịch và đặt nhi�
 | Làm ticket, review và merge | [Quy trình đóng góp](CONTRIBUTING.md) |
 | Giao việc cho Codex hoặc agent khác | [Hướng dẫn cho agent](AGENTS.md) |
 
-Trong PowerShell tại thư mục repo, chạy `.\scripts\dev.ps1 -Action Start`, rồi mở [danh mục thiết bị](http://localhost:8000/). Kết quả kiểm chứng được lưu theo commit. [Bằng chứng Base và V2-M1](docs/verification.md)
+Trong PowerShell tại thư mục repo, chạy `.\scripts\dev.ps1 -Action Start`, rồi mở [danh mục thiết bị](http://localhost:8000/). Kết quả kiểm chứng được lưu theo commit. [Bằng chứng kiểm chứng](docs/verification.md)

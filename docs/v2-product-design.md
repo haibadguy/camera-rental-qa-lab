@@ -41,9 +41,9 @@ Tám phân hệ là ranh giới nghiệp vụ trong cùng một modular monolith
 
 ## Quyết định trước V2-M2
 
-Các mặc định dưới đây chờ Hải duyệt. Bộ quyết định được duyệt sẽ là căn cứ triển khai V2-M2.
+Hải đã duyệt năm chính sách dưới đây ngày 23/11/2026 trong phiên làm việc V2-M2. Các chính sách là căn cứ triển khai và nghiệm thu mốc này. Các quyết định cho M3–M5 nằm cuối mục.
 
-| Quyết định | Mặc định đề xuất | Đánh đổi |
+| Quyết định | Chính sách đã duyệt | Đánh đổi |
 | --- | --- | --- |
 | **1. Hạn trả và trả sớm** | Giữ quy tắc Base theo ngày Việt Nam. Từ ngày sau ngày trả, món chưa về bị đánh dấu trễ. Ngay ngày hẹn trả, món chưa sẵn sàng đã hiện rủi ro cho đơn sắp giao. Trả sớm kết thúc việc giữ tài sản ngoài kho, còn lịch giữ đến hết kỳ đã cam kết. Giữ cách hiểu này với đơn v1. | Hạn theo giờ và thời gian ân hạn sát ca làm hơn nhưng cần giờ cam kết tin cậy và quy tắc riêng cho đơn cũ. Giữ lịch khi trả sớm có thể làm giảm lượt thuê mới trong phần kỳ còn lại. |
 | **2. Đổi lịch và gia hạn** | Khách gửi yêu cầu, nhân viên kiểm lịch rồi phê duyệt. Đổi trước bàn giao áp dụng cho cả đơn, giữ các SKU và số lượng. Gia hạn trước khi quá hạn, khi chưa có món nào trả hay đóng ngoại lệ. Giữ ngày nhận và giới hạn tổng kỳ 30 ngày. Tính lại tiền thuê theo đơn giá đã chốt, ghi chấp thuận của khách nếu tổng thay đổi. Tranh chấp tồn giữ nguyên lịch và giá trước đó. | Gia hạn từng món hoặc sau khi đã trả một phần linh hoạt hơn nhưng tạo nhiều hạn trả và nhiều lần đối soát trong một đơn. |

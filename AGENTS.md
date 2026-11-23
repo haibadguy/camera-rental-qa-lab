@@ -13,14 +13,13 @@ Follow [ROADMAP.md](ROADMAP.md) for V2-M2 through V2-M5 and release gates. Use [
 ## Architecture constraints
 - Retain Django, Django Templates and JavaScript, DRF, PostgreSQL, Docker Compose and GitHub Actions.
 - Keep a modular monolith. Keep the `catalog` Django app label and migrations stable unless change is demonstrably safe and explicitly approved.
-- Give each domain rule one owner. Views and API are adapters. Use explicit calls between domain functions and keep dependencies acyclic.
-- Use `catalog/services.py` as the shared web and API entry point. Keep rule implementations in their owning modules. Start with the current Equipment, Inventory and Rentals modules. Keep registration on Django auth.
-- Keep ORM models and migrations in `catalog`. Create a domain or adapter package when a milestone introduces a concrete responsibility that benefits from the split. Any move must preserve caller contracts and be independently verifiable. [Target architecture](docs/architecture.md#kiến-trúc-mục-tiêu)
+- Give each domain rule one owner. Web and DRF call `catalog/services.py`. Keep domain dependencies acyclic and registration on Django auth. [Module ownership](docs/architecture.md#kiến-trúc-mục-tiêu)
+- Keep ORM models and migrations in `catalog`. Split an adapter, module or set of templates when its responsibilities justify the move. Preserve caller contracts and verify the affected paths.
 
 ## Business invariants
 - Dates: start-inclusive, end-exclusive; 1–30 days; no past start; Asia/Ho_Chi_Minh.
 - Price calculation performed server-side; booking stores price snapshot.
-- Lifecycle: CONFIRMED -> PICKED_UP -> RETURNED; CONFIRMED -> CANCELLED; no-show uses documented reason. Early/late returns record actual timestamps; scheduled and physical availability differ.
+- Lifecycle: CONFIRMED -> PICKED_UP -> RETURNED; CONFIRMED -> CANCELLED with documented no-show reason where applicable. V2-M2 records receipt and inspection separately for each asset. Confirmed loss can close a rental with its own timestamp. Early return preserves the promised schedule.
 - Prevent booking and pickup over-allocation with PostgreSQL transactions and real database concurrency tests. Lock `Equipment` before `Rental` in operations that affect stock.
 - Enforce ownership/roles on backend and DRF, not through UI visibility alone. Preserve booking history.
 - Identify the requirement ID, scope and acceptance criteria before edits. Resolve scope questions against `docs/requirements.md` for Base and owner-approved v2 requirements for new work. Report conflicts and obtain Hải's approval before adding a business rule or changing the stack.

@@ -24,6 +24,8 @@ Danh mục gồm ba mẫu thiết bị. Ngày của đơn demo tính theo giờ 
 
 Danh mục demo mới có mã kho cho cả ba mẫu. Mở **Đặt nhiều thiết bị** để chọn Sony A6400 và Sigma 30mm Sony E trong cùng kỳ. Nhân viên xem lịch theo mã kho tại **Kho thiết bị → Mã kho và lịch giữ**, hoặc đổi máy cùng mẫu trên chi tiết đơn đã đặt.
 
+Trên V2-M2, `demo-staff` được cấp quyền vận hành khi tạo mới. Vào **Vận hành thuê** để duyệt đổi kỳ, chuẩn bị, bàn giao và nhận trả từng món. Hồ sơ mẫu đã bàn giao từ trước dùng thao tác nhận trả nguyên đơn.
+
 Ảnh WebP trong [thư mục ảnh giao diện](../catalog/static/catalog/images/) được tạo bằng ImageGen. Trang danh mục dùng `editorial.webp`, ảnh người cầm máy cạnh ống kính trên bờ tường bê tông trong ánh nắng cam. Màn đăng nhập dùng `hero.webp`, ảnh máy mirrorless trên đá tối. Ba ảnh minh họa thiết bị `sony.webp`, `canon.webp` và `lens.webp` lần lượt mô phỏng Sony A6400, Canon EOS R50 và Sigma 30mm f/1.4 trong studio. Phông Geist và giấy phép đi kèm nằm trong [thư mục phông chữ](../catalog/static/catalog/fonts/).
 
 Thông số demo dựa trên tài liệu hãng của [Sony A6400](https://www.sony.com/electronics/support/e-mount-body/ilce-6400/specifications), [Canon EOS R50](https://www.usa.canon.com/support/p/eos-r50) và [Sigma 30mm F1.4](https://www.sigma-global.com/en/lenses/c016_30_14/).
@@ -49,7 +51,7 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 .\scripts\dev.ps1 -Action Verify -Port 8010
 ```
 
-`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Bộ test có ba ca đồng thời gồm đặt đơn Base, bàn giao và đặt nhiều SKU. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002` và `catalog.0004`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
+`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Suite kiểm tranh chấp khi đặt đơn, bàn giao, đổi kỳ và bảo trì. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002`, `catalog.0004` và `catalog.0005`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
 
 Để xác minh ứng viên, dùng checkout sạch của SHA đã chọn và chạy từ thư mục gốc của checkout đó. Ghi SHA vào kết quả. Có thể thêm `-Project camera-base-rc` để phân biệt nhóm kiểm tra, script vẫn tự thêm hậu tố riêng vào tên project.
 
@@ -81,3 +83,16 @@ Migration `catalog.0005` yêu cầu PostgreSQL có extension `btree_gist` hoặc
 4. Khi số lượng đăng ký khớp tổng tồn v1 và danh sách đã hết, bật giữ theo mã kho. Từ đó đơn một dòng và đơn nhiều dòng giữ cùng một nguồn tài sản. Mẫu xuất hiện trong luồng đặt nhiều thiết bị.
 
 Sau khi đã ghi mã kho hoặc đơn nhiều dòng, rollback migration `0005` bị chặn. Với chuyển đổi thật, dùng phương án khôi phục đã diễn tập và giữ các giao dịch phát sinh.
+
+## V2-M2 · Vai trò vận hành
+
+Migration `catalog.0006` giữ lịch và timestamp đã có. Đơn đã bàn giao nguyên đơn trước khi nâng tiếp tục nhận trả ở **Quản lý đơn thuê**. Đơn mới theo mã kho cần xác nhận chuẩn bị đủ món trước khi giao và kiểm tra sau khi nhận. Migration chặn rollback khi đã có lịch sử vận hành hoặc dữ liệu kiểm tra và tình trạng tài sản.
+
+`migrate` tạo nhóm `Rental Operators` và `Rental Managers`. Đối chiếu tài khoản nhân viên hiện có rồi cấp quyền riêng cho từng người. Ví dụ trên project demo mới hoặc project biệt lập, dùng file môi trường và tên project tương ứng.
+
+```powershell
+docker compose exec web python manage.py set_rental_role demo-staff operator
+docker compose exec web python manage.py set_rental_role <staff-username> manager
+```
+
+Quản lý có quyền vận hành và thêm quyền kết thúc hồ sơ bảo trì, mở lại tồn hoặc xác nhận mất. Quyền thao tác cũ trên đơn Base vẫn dùng `is_staff`. [Hợp đồng Web/API](architecture.md#v2-m2--vận-hành-thuê)

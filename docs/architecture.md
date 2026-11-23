@@ -7,28 +7,9 @@ Django Templates phục vụ web và Django REST Framework phục vụ API. Post
 | HTTP UI/API | Xác thực người dùng, đọc input, gọi nghiệp vụ dùng chung và trả kết quả. Web dùng Django auth, API dùng tài khoản Django qua HTTP Basic trên localhost hoặc phiên Django có CSRF. |
 | Điểm vào nghiệp vụ | `catalog/services.py` công bố các hàm chung cho web và API. Các module nghiệp vụ sở hữu phần thực thi. |
 | PostgreSQL | Lưu thiết bị, người dùng và đơn. Sử dụng giao dịch khi tạo đơn, đổi trạng thái hoặc chỉnh tồn. Migrations quản lý thay đổi schema. |
-| Dữ liệu demo và xác minh | Seed lặp được với tài khoản, danh mục và đơn mẫu. `catalog/tests.py` và `catalog/test_asset_rentals.py` kiểm chứng nghiệp vụ, migration và tranh chấp tồn trên PostgreSQL. `scripts/smoke.py` kiểm tra web và API qua HTTP. |
+| Dữ liệu demo và xác minh | Seed lặp được với tài khoản, danh mục và đơn mẫu. `catalog/tests.py` và `catalog/test_*.py` kiểm chứng nghiệp vụ, migration và tranh chấp tồn trên PostgreSQL. `scripts/smoke.py` kiểm tra web và API qua HTTP. |
 
-## Module nghiệp vụ
-
-| Phần | Nơi sửa | Trách nhiệm |
-| --- | --- | --- |
-| Tài khoản · R08 | `catalog/views.py`, `config/urls.py` | View đăng ký dùng `UserCreationForm`. Django auth xử lý đăng nhập, đăng xuất và cung cấp thuộc tính `is_staff`. |
-| Danh mục và đăng ký tài sản | `catalog/equipment.py` | Quản lý SKU, giá niêm yết, thông số, mã kho và bật giữ theo tài sản sau đối soát. Khi chỉnh tồn v1, hỏi `inventory` về mức tồn tối thiểu sau khi khóa thiết bị. |
-| Tồn kho và kỳ thuê | `catalog/inventory.py` | Kiểm tra kỳ, tính tồn tổng cho SKU v1 và tìm tài sản rảnh cho SKU đã chuyển đổi. Cung cấp lịch giữ, tồn thực tế và danh sách đơn chưa đối soát cho màn kho. |
-| Đơn thuê và giao nhận | `catalog/rentals.py` | Tạo đơn và dòng, chốt giá, giữ và giải phóng lịch, đổi tài sản cùng SKU, bàn giao và nhận trả nguyên đơn. Màn chi tiết dùng chung quy tắc trạng thái và ngày với các thao tác ghi. |
-
-Thông tin công khai về điểm nhận, giờ và hỗ trợ lấy từ [cấu hình cửa hàng](setup.md#thông-tin-nhậntrả-cho-khách). Web hiển thị thông tin này trước khi đặt và trên đơn còn hiệu lực.
-
-```text
-Web, API và form → services
-services → equipment, inventory, rentals
-equipment, rentals → inventory
-equipment, inventory, rentals → models, errors
-Đăng ký web → Django auth
-```
-
-`equipment`, `rentals` và `inventory` dùng chung models và `RentalError` từ `catalog/errors.py`. `inventory` đọc dữ liệu qua ORM. Các module thiết bị và đơn thuê sở hữu giao dịch ghi của mình.
+Đăng ký tại `catalog/views.py` dùng `UserCreationForm` của Django auth. Web hiển thị điểm nhận, giờ và hỗ trợ trước khi đặt và trên đơn còn hiệu lực. [Cấu hình cửa hàng](setup.md#thông-tin-nhậntrả-cho-khách) · [Quyền sở hữu module](#kiến-trúc-mục-tiêu)
 
 ## Mô hình dữ liệu
 
@@ -70,79 +51,64 @@ API trả `400` cho dữ liệu sai, `401` khi thiếu hoặc sai thông tin xá
 
 Các đơn v1 đang mở vẫn xử lý qua hợp đồng cũ. Giữ theo mã kho chỉ bật theo từng mẫu sau khi đối soát. [Quy trình nâng dữ liệu](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho)
 
+## V2-M2 · Vận hành thuê
+
+Khách mở đơn của mình để báo giá và gửi yêu cầu đổi kỳ. Nhân viên có quyền vận hành duyệt trên hàng đợi, kiểm lịch trong giao dịch và tính lại từ giá ngày đã chốt. Lượt giữ trước khi đổi kỳ và quyết định của nhân viên vẫn truy được. Gia hạn giữ nguyên mã kho đang giao và dừng khi đã nhận lại hoặc đóng ngoại lệ một món.
+
+Giao nhận theo mã kho lưu bản chụp phụ kiện, người thao tác và các mốc chuẩn bị, giao, nhận, kiểm và xác nhận mất. Nhân viên xác nhận đủ đơn trong một lần bàn giao, sau đó nhận trả từng món. Món chờ kiểm hoặc cách ly bị chặn. Trả sớm giữ lịch đến ngày trả đã cam kết. Từ ngày hẹn trả, máy chưa sẵn sàng xuất hiện trong nhóm đơn có nguy cơ thiếu. Từ ngày sau, món chưa trả được tính quá hạn.
+
+Bảo trì đã lên lịch dùng chung `AssetReservation` và ràng buộc chống chồng lấn với đơn thuê. Sự cố đột xuất cách ly máy và giữ lịch sử các lượt đã gán. Nhân viên đổi máy cùng mẫu nếu còn lịch, còn quản lý quyết định đưa máy về kho hoặc ngừng sử dụng. Món được xác nhận mất có dấu thời gian riêng. Khi toàn bộ món đã được xử lý và có món mất, đơn chuyển `CLOSED` với `closed_at`.
+
+| Interface | Hợp đồng V2-M2 |
+| --- | --- |
+| Khách Web | `/rentals/{id}/change/` để báo giá và gửi yêu cầu. Chi tiết đơn hiển thị kết quả duyệt và số món đã về. |
+| Khách API | `POST /api/v2/rentals/{id}/changes/quote/` báo giá. `GET/POST /api/v2/rentals/{id}/changes/` đọc lịch sử hoặc gửi yêu cầu với `kind`, kỳ mới và `accepted_total_vnd` khi tiền đổi. `GET /api/v2/rentals/{id}/` thêm `closed_at` và tóm tắt nhận trả. |
+| Nhân viên Web | `/staff/operations/` hiển thị hàng đợi và yêu cầu đổi kỳ. Chi tiết vận hành liên kết với đơn, lịch kho và hồ sơ tại `/staff/maintenance/`. |
+| Nhân viên API | `/api/v2/operations/` cung cấp hàng đợi. Các route con xử lý chuẩn bị, giao, nhận, kiểm, duyệt đổi kỳ và bảo trì. Các thao tác chuẩn bị, nhận và kiểm trả `204` khi thành công. [Route cụ thể](../config/urls.py) |
+| Tương thích v1 | Giữ luồng tồn tổng, đơn đang ở ngoài kho từ M1 và định dạng đơn một dòng của v1. Bàn giao theo mã kho yêu cầu quyền vận hành và chuẩn bị đủ. Ghi nhận trả nguyên đơn v1 trả `409` kèm đường dẫn v2 nếu đơn đang dùng giao nhận theo món. Xem chi tiết `CLOSED` qua v2. |
+
+Migration `0006_rental_operations` nối trực tiếp từ `0005`. Đơn đang được thuê từ V2-M1 tiếp tục nhận trả nguyên đơn và vẫn được tính đang ở ngoài kho. Migration bảo toàn lượt giữ, dữ liệu giá và timestamp đã ghi. Bản ghi giao nhận mới bắt đầu khi nhân viên xác nhận chuẩn bị. [Thiết lập vai trò và nâng dữ liệu](setup.md#v2-m2--vai-trò-vận-hành)
+
 ## Kiến trúc mục tiêu
 
-Một Django project và một PostgreSQL database phục vụ một cửa hàng. Giữ app label `catalog`, các migrations đã áp dụng và dữ liệu lịch sử. Giữ Django Templates và JavaScript cho giao diện, DRF cho API, Docker Compose cho môi trường chạy và GitHub Actions cho kiểm chứng.
+Camera Rental là modular monolith cho một cửa hàng. `catalog` giữ app label và ORM, `config` giữ settings và URL. Django Templates và JavaScript, DRF, PostgreSQL, Docker Compose và GitHub Actions phục vụ cùng ứng dụng.
 
-| Lớp | Trách nhiệm |
+| Module | Trách nhiệm hiện tại |
 | --- | --- |
-| Giao diện | Customer Portal phục vụ chọn thiết bị, đặt và theo dõi đơn. Staff Workspace ưu tiên hàng đợi công việc, lịch kho và thao tác tại quầy. Manager Dashboard ưu tiên ngoại lệ cần duyệt, số dư, kiểm kê và báo cáo theo kỳ. Cả ba dùng chung thành phần giao diện và có bố cục theo công việc của từng vai trò. |
-| Adapter | Django Views, Forms, DRF và Django auth nhận đầu vào, xác thực, kiểm quyền, gọi service và trả kết quả. Service vẫn kiểm quyền và bất biến khi ghi dữ liệu. |
-| Nghiệp vụ | `catalog/services.py` giữ điểm vào tương thích cho web/API. Các domain sở hữu quy tắc, gọi nhau qua hàm nghiệp vụ rõ trách nhiệm và giữ một chiều phụ thuộc. |
-| Dữ liệu và hạ tầng | Django ORM và PostgreSQL lưu trạng thái, giao dịch và lịch sử. Constraints bảo vệ các bất biến dữ liệu. Docker Compose và GitHub Actions dùng cùng luồng kiểm chứng. |
+| `equipment.py` | SKU, danh mục, giá niêm yết, phụ kiện và đăng ký tài sản. |
+| `inventory.py` | Kỳ thuê, khả dụng theo lịch, lượt giữ, tồn thực tế và truy vấn đối soát. Đặt, đổi, thay máy và bảo trì dùng chung phép kiểm khả dụng. |
+| `rentals.py` | Đặt thuê, chốt giá, hủy, `NO_SHOW`, thay máy cùng mẫu và điều phối vòng đời đơn. |
+| `schedule_changes.py` | Yêu cầu đổi kỳ, gia hạn, chấp thuận giá và duyệt nguyên tử. |
+| `custody.py` | Khóa theo đơn, chuẩn bị, thời điểm giao nhận và kết quả kiểm từng mã kho. |
+| `maintenance.py` | Giữ lịch bảo trì, cách ly, sửa, xử lý sự cố và mở lại tồn sau kiểm tra. |
+| `operations.py` | Hàng đợi vận hành và giao dịch nối kết quả kiểm của Custody với Maintenance. |
+| `roles.py` | Quyền vận hành và xử lý ngoại lệ bằng các nhóm Django. |
+| `services.py` | Điểm vào chung cho Web và DRF, công bố hàm từ module sở hữu. |
 
-### Quyền sở hữu nghiệp vụ
+`operations` gọi `custody` và `maintenance`. `maintenance` gọi `custody` để đóng lượt giao nhận có mất. `custody` và các module cần kiểm lịch gọi `inventory`. Các giao dịch ảnh hưởng tồn khóa `Equipment` theo ID tăng dần trước `Rental`, rồi kiểm lại điều kiện dưới khóa.
 
-| Domain | Trách nhiệm |
-| --- | --- |
-| Accounts & Roles | Tài khoản Django, vai trò khách/nhân viên/quản lý và quyền theo thao tác. |
-| Equipment | SKU, danh mục, thông số, phụ kiện và giá niêm yết. |
-| Inventory | Tài sản vật lý, trạng thái khả dụng, lịch giữ và tồn thực tế. Cung cấp cùng một kiểm tra khả dụng cho đặt đơn, đổi lịch, thay máy và bảo trì. |
-| Rentals | Đơn, dòng đơn, vòng đời, đổi kỳ và giao nhận. Điều phối giao dịch và gọi Inventory khi cần giữ lịch hoặc giao thiết bị. |
-| Maintenance | Ghi sự cố, kiểm tra, cách ly, sửa chữa và quyết định đưa máy về kho. Gọi Inventory khi thay đổi khả dụng. |
-| Finance | Snapshot giá, cọc, thu/hoàn, phí, bút toán và quyết toán. Giữ quy tắc tiền theo chính sách đã duyệt. |
-| Reporting | Đọc dữ liệu nghiệp vụ và tổng hợp chỉ số cho quản lý. |
-| Audit & History | Ghi người thao tác, thời điểm và lý do vào cùng giao dịch của domain sở hữu thay đổi. Reporting đọc lịch sử để truy vết. |
-
-### Điểm tách đã xác định từ code
-
-| Hiện trạng | Thay đổi có lý do |
-| --- | --- |
-| Tồn vật lý theo mã kho suy ra từ trạng thái `PICKED_UP` của cả đơn. [Inventory](../catalog/inventory.py#L149-L166) · [Giao nhận hiện tại](../catalog/rentals.py#L200-L261) | **M2** cần nguồn ghi theo từng tài sản để phân biệt đã về, chưa về và chờ kiểm. Giữ lịch cam kết và thời điểm thực tế riêng để nhận trả từng phần không làm sai tồn. |
-| Inventory truy khả dụng, còn Rentals ghi lượt giữ, giải phóng, thay máy và kiểm khả năng giao. [Kiểm lịch](../catalog/inventory.py#L149-L166) · [Tạo lượt giữ](../catalog/rentals.py#L117-L136) · [Giải phóng và thay máy](../catalog/rentals.py#L264-L303) | **M2** đưa thao tác lịch dùng chung vào Inventory khi đổi kỳ và bảo trì cần cùng quy tắc. Rentals giữ giao dịch của đơn. Chỉ tách file giao nhận khi phần xử lý theo mã kho có trách nhiệm và kiểm thử riêng. |
-| Web và DRF dựa vào `is_staff` cho các thao tác nhân viên. `views.py` chứa cả hai luồng khách và nhân viên, `api.py` chứa serializer và các route v1/v2. [Web](../catalog/views.py#L273-L305) · [DRF](../catalog/api.py#L154-L240) | **M2** kiểm quyền theo thao tác sau khi duyệt vai trò. Chỉ tách adapter theo luồng khi có thay đổi thực tế, như màn duyệt quyết toán M3 hoặc màn quản lý M4. |
-
-### Bố cục tham chiếu
-
-V2-M2 bắt đầu trên cấu trúc hiện có. Các đường dẫn dưới đây là nơi phù hợp khi có nghiệp vụ thực tế và điểm tách rõ. Giữ các module đang phục vụ tính năng cho đến khi một thay đổi cần di chuyển chúng.
+### Bố cục hiện tại
 
 ```text
 catalog/
   models.py, services.py, errors.py
-  domains/
-    equipment/           danh mục và giá niêm yết
-    inventory/           khả dụng và giữ lịch theo tài sản
-    rentals/             đặt thuê, vòng đời và giao nhận
-    maintenance/         khi có quy trình bảo trì trong M2
-    finance/             khi có giá và sổ tiền trong M3
-    reporting/           khi có truy vấn báo cáo trong M4
-  web/                   khi các luồng khách, nhân viên và quản lý cần tách
-  api/                   khi cần tách route, serializer hoặc quyền
-  migrations/
-  templates/catalog/     customer, staff, manager, components khi có nội dung
-  static/catalog/        CSS, JavaScript, ảnh và font theo nhu cầu giao diện
-  tests/                 khi cách tổ chức suite hiện tại gây khó tìm hoặc chạy test
+  equipment.py, inventory.py, rentals.py, schedule_changes.py
+  custody.py, maintenance.py, operations.py, roles.py
+  views.py, forms.py, api.py, operations_web.py, operations_api.py
+  migrations/                 0001–0006
+  templates/catalog/         màn Base/M1 và template dùng chung
+    customer/                 yêu cầu đổi hoặc gia hạn
+    staff/                    giao nhận, hàng đợi, bảo trì và duyệt ngoại lệ
+  static/catalog/             CSS, JavaScript, ảnh, phông chữ
+  tests.py, test_asset_rentals.py, test_schedule_changes.py
+  test_operations.py, test_maintenance.py
+config/                        settings và URL
+docs/                          đặc tả, thiết kế, thiết lập và bằng chứng
 ```
 
-Models và migrations tiếp tục thuộc app `catalog`. Tài khoản dùng Django auth. Lịch sử nghiệp vụ nằm tại giao dịch tạo thay đổi. ORM phục vụ truy vấn dữ liệu trực tiếp qua các module sở hữu nghiệp vụ.
+Adapter V2-M2 có module riêng vì bổ sung form giao nhận, hàng đợi, bảo trì và serializer theo vai trò. Màn Base/M1 tiếp tục dùng đường dẫn template hiện tại. Chỉ chia thêm khi có trách nhiệm cụ thể, như sổ giao dịch M3 hoặc truy vấn báo cáo M4. [Roadmap](../ROADMAP.md#roadmap-v20)
 
-### Schema và tương thích theo mốc
+### Kiểm chứng thay đổi
 
-| Mốc | Ảnh hưởng dự kiến |
-| --- | --- |
-| V2-M2 | Bổ sung yêu cầu đổi kỳ có kết quả phê duyệt, bản ghi giao nhận và kiểm tra theo mã kho, hiện trạng kỹ thuật, sự cố và lịch sử bảo trì. Đảm bảo mỗi tài sản có tối đa một lượt bàn giao đang mở. Dùng cùng kiểm tra lịch theo tài sản cho đặt, đổi và bảo trì đã lên lịch. Cách ly đột xuất cần chặn giao máy và báo các đơn bị ảnh hưởng dù đã có giữ chỗ. Nếu có trạng thái đóng do mất, migration phải bảo toàn timestamp thật và lịch sử đơn v1. Dùng Django Groups và quyền nghiệp vụ để chuyển vai trò nhân viên theo danh sách đã xác minh. |
-| V2-M3 | Đặt sổ giao dịch VND, quy tắc giá và quyết toán đã duyệt trong Finance. Dùng khóa thao tác để tránh ghi trùng. Lưu điều chỉnh bằng bút toán có lý do và liên kết bản ghi gốc. |
-| V2-M4 | Đặt truy vấn từ đơn, giao nhận, bảo trì và sổ tiền trong Reporting. Thêm phiên kiểm kê và lịch sử chênh lệch nếu cần để truy người xử lý. Chỉ thêm index khi truy vấn thực tế cho thấy cần. |
-| V2-M5 | Kiểm chứng cài mới, nâng dữ liệu từ v1 và M1, phục hồi và tương thích API trên PostgreSQL biệt lập. Hoàn thiện việc tách adapter, giao diện hoặc test nếu có vấn đề bảo trì đã xác định và bước thay đổi có thể hoàn tác. Chủ sản phẩm duyệt cách chuyển tiếp trước khi đổi hợp đồng ở pilot. |
-
-Tiếp tục khóa `Equipment` theo ID tăng dần trước `Rental` trong giao dịch ảnh hưởng tồn. Khi mở rộng từ giữ chỗ sang bảo trì, kiểm chứng va chạm giữa hai loại lịch trên PostgreSQL và giữ ràng buộc loại trừ chồng lấn đã có. Sau khi khóa, kiểm lại trạng thái, kỳ và khả năng giao. Sự kiện nhận vật lý, kết quả kiểm và quyết toán là các dấu mốc riêng. [Quyết định trước V2-M2](v2-product-design.md#quyết-định-trước-v2-m2)
-
-Trong V2-M2, kiểm từng route ghi v1 với chính sách mới. Với đơn một dòng vẫn biểu diễn đúng, gọi cùng nghiệp vụ và giữ hợp đồng Base. Nếu thao tác cần dữ liệu theo mã kho mà v1 không gửi được, thiết kế lỗi rõ và đường dẫn chuyển sang v2 trước khi thay đổi hợp đồng. Đơn cũ chưa đối soát tiếp tục được báo tại màn kho. Migration tương lai giữ ID, snapshot, trạng thái và dấu thời gian đã ghi.
-
-Trước chuyển đổi trên dữ liệu thật, dừng ghi, chờ giao dịch đang chạy kết thúc, chụp điểm khôi phục rồi đối chiếu đơn, giá và lịch. Diễn tập phục hồi trên bản sao. Phương án khôi phục phải tính cả các giao dịch phát sinh sau khi mở ghi. [Quy trình V2-M1 hiện tại](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho)
-
-### Kiểm chứng mỗi bước tách
-
-- Giữ các route, tên URL, mã lỗi, kiểu phản hồi, tên template và API Python đang có người gọi. Khi chuyển `api.py` hoặc `tests.py` thành package cùng tên, chuyển điểm import và test discovery trong cùng thay đổi để Python không nạp nhầm module. Khi tách static, kiểm cả đường dẫn tương đối từ CSS đến font. [URL hiện tại](../config/urls.py) · [Template gốc](../catalog/templates/catalog/base.html) · [CSS](../catalog/static/catalog/site.css)
-- Giữ nguyên migration `0001`–`0005`. Một lần di chuyển nội bộ thuần cấu trúc cần đạt `manage.py check` và `makemigrations --check --dry-run`. Với schema mới, kiểm nâng dữ liệu v1/M1 gồm ID, giá, trạng thái và timestamp. Migration `0005` chặn hạ cấp khi đã tạo tài sản, bật giữ theo tài sản hoặc tạo đơn nhiều dòng. [Migration `0005`](../catalog/migrations/0005_asset_units_and_rental_lines.py#L39-L51)
-- Chạy test hành vi cho quyền, vòng đời, giá và tồn. Kiểm tranh chấp bằng kết nối PostgreSQL độc lập. Với thay đổi web/API, chạy smoke hai phiên bản và mở lại các màn bị ảnh hưởng để kiểm template và static. [Verify biệt lập](setup.md#kiểm-tra-và-dựng-dữ-liệu-sạch) · [Workflow hiện tại](../.github/workflows/base.yml)
+- Giữ URL, hợp đồng phản hồi và migration đã áp dụng. Mỗi ứng viên cần kiểm system check, migration drift, cài mới và nâng dữ liệu trên PostgreSQL biệt lập.
+- Dùng kết nối PostgreSQL độc lập để kiểm đặt đồng thời, bàn giao, đổi kỳ và bảo trì. Mở các màn thay đổi trên desktop và mobile, và chạy smoke Web/API. [Quy trình Verify](setup.md#kiểm-tra-và-dựng-dữ-liệu-sạch)
