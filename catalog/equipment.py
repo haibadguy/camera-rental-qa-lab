@@ -28,6 +28,7 @@ def create_equipment(
     *,
     kind=Equipment.Kind.CAMERA,
     specifications="",
+    accessory_checklist="",
     is_active=True,
 ):
     if not staff.is_staff:
@@ -40,6 +41,7 @@ def create_equipment(
             "total_stock": total_stock,
             "kind": kind,
             "specifications": specifications,
+            "accessory_checklist": accessory_checklist,
             "is_active": is_active,
         },
     )
@@ -58,6 +60,7 @@ def update_equipment(
     *,
     kind=None,
     specifications=None,
+    accessory_checklist=None,
     is_active=None,
 ):
     if not staff.is_staff:
@@ -74,7 +77,12 @@ def update_equipment(
     equipment.name = name
     equipment.daily_rate_vnd = daily_rate_vnd
     equipment.total_stock = total_stock
-    changes = {"kind": kind, "specifications": specifications, "is_active": is_active}
+    changes = {
+        "kind": kind,
+        "specifications": specifications,
+        "accessory_checklist": accessory_checklist,
+        "is_active": is_active,
+    }
     updated_fields = ["name", "daily_rate_vnd", "total_stock"]
     for field, value in changes.items():
         if value is not None:

@@ -24,6 +24,9 @@
           {% else %}
             <a href="{% url 'my-rentals' %}"{% if request.resolver_match.url_name == 'my-rentals' %} aria-current="page"{% endif %}>Đơn của tôi</a>
           {% endif %}
+          {% if perms.catalog.operate_rentals %}
+            <a href="{% url 'operations-queue' %}"{% if request.resolver_match.url_name == 'operations-queue' %} aria-current="page"{% endif %}>Vận hành thuê</a>
+          {% endif %}
         {% endif %}
       </div>
       <div class="account-links">

@@ -246,6 +246,11 @@ textarea { resize: vertical; }
 .status-picked_up { background: #f7eedb; color: #76501a; }
 .status-returned { background: #e8efed; color: #31564d; }
 .status-cancelled { background: #efefeb; color: #5b5f54; }
+.status-closed { background: #f7eedb; color: #76501a; }
+.operation-section { margin-top: 1.5rem; }
+.operation-form { display: grid; gap: .5rem; margin-top: .9rem; }
+.operation-form button { justify-self: start; }
+.multiline { white-space: pre-line; overflow-wrap: anywhere; }
 .status-warning { margin-top: .25rem; color: #855227; font-size: .74rem; }
 .inventory-row { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1.65fr) auto; }
 .inventory-identity { display: grid; grid-template-columns: 5.8rem minmax(0, 1fr); align-items: center; gap: .9rem; }

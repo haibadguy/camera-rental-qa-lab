@@ -1,0 +1,149 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Giao nhận đơn #{{ rental.pk }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn">
+    <a href="{% url 'operations-queue' %}">Vận hành thuê</a>
+    <span aria-hidden="true">/</span>
+    <a href="{% url 'staff-rental-detail' rental.pk %}">Đơn #{{ rental.pk }}</a>
+  </nav>
+  <div class="page-heading">
+    <div>
+      <h1>Giao nhận đơn #{{ rental.pk }}</h1>
+      <p class="muted">{{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</p>
+    </div>
+    <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+  </div>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <section class="operation-section" aria-labelledby="handover-heading">
+    <h2 id="handover-heading">Thiết bị theo mã kho</h2>
+    <ul class="workspace-rows">
+      {% for hold, item in rows %}
+        <li class="panel order-panel">
+          <h3>{{ hold.asset.code }} <span class="muted">{{ hold.line.equipment.name }}</span></h3>
+          <dl class="details order-details">
+            <div>
+              <dt>Tình trạng kho</dt>
+              <dd>{{ hold.asset.get_status_display }}</dd>
+            </div>
+            <div>
+              <dt>Phụ kiện cần đối chiếu</dt>
+              <dd class="multiline">{% if item %}{{ item.expected_accessories|default:"Chưa khai báo" }}{% else %}{{ hold.line.equipment.accessory_checklist|default:"Chưa khai báo" }}{% endif %}</dd>
+            </div>
+            {% if item.prepared_at %}
+              <div><dt>Chuẩn bị</dt><dd>{{ item.prepared_at|date:"d/m/Y H:i" }}</dd></div>
+            {% endif %}
+            {% if item.pickup_notes %}
+              <div><dt>Ghi chú khi chuẩn bị</dt><dd class="multiline">{{ item.pickup_notes }}</dd></div>
+            {% endif %}
+            {% if item.picked_up_at %}
+              <div><dt>Đã giao</dt><dd>{{ item.picked_up_at|date:"d/m/Y H:i" }}</dd></div>
+            {% endif %}
+            {% if item.returned_at %}
+              <div><dt>Đã nhận</dt><dd>{{ item.returned_at|date:"d/m/Y H:i" }}</dd></div>
+            {% endif %}
+            {% if item.inspected_at %}
+              <div><dt>Kiểm tra khi trả</dt><dd>{{ item.get_inspection_result_display }} · {{ item.inspected_at|date:"d/m/Y H:i" }}</dd></div>
+            {% elif item.returned_at %}
+              <div><dt>Kiểm tra khi trả</dt><dd>Chờ kiểm tra</dd></div>
+            {% endif %}
+            {% if item.return_notes %}
+              <div><dt>Ghi chú khi trả</dt><dd class="multiline">{{ item.return_notes }}</dd></div>
+            {% endif %}
+            {% if item.lost_at %}
+              <div><dt>Đã xác nhận mất</dt><dd>{{ item.lost_at|date:"d/m/Y H:i" }}</dd></div>
+            {% elif item.picked_up_at and not item.returned_at %}
+              <div><dt>Nhận trả</dt><dd>{% if rental.is_overdue %}Đang ở ngoài kho · Quá hạn{% else %}Đang ở ngoài kho{% endif %}</dd></div>
+            {% endif %}
+          </dl>
+          {% if rental.status == 'CONFIRMED' and not item.prepared_at %}
+            <form method="post" class="operation-form">
+              {% csrf_token %}
+              <input type="hidden" name="item_id" value="{{ hold.pk }}">
+              <label for="prepare-notes-{{ hold.pk }}">Ghi chú kiểm tra trước giao</label>
+              <textarea id="prepare-notes-{{ hold.pk }}" name="notes" maxlength="2000" rows="2"></textarea>
+              <button type="submit" name="action" value="prepare" class="button-outline">Xác nhận đã chuẩn bị</button>
+            </form>
+          {% endif %}
+          {% if item.picked_up_at and not item.returned_at and not item.lost_at %}
+            <div class="actions">
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="item_id" value="{{ item.pk }}">
+                <button type="submit" name="action" value="receive">Nhận trả thiết bị</button>
+              </form>
+            </div>
+            <details class="operation-section">
+              <summary>Thiết bị chưa tìm thấy</summary>
+              <form method="post" class="operation-form">
+                {% csrf_token %}
+                <input type="hidden" name="item_id" value="{{ item.pk }}">
+                <label for="lost-notes-{{ item.pk }}">Ghi nhận tình huống</label>
+                <textarea id="lost-notes-{{ item.pk }}" name="notes" required maxlength="2000" rows="2"></textarea>
+                <button type="submit" name="action" value="lost" class="button-outline">Báo sự cố</button>
+              </form>
+            </details>
+          {% endif %}
+          {% if item.returned_at and not item.inspected_at %}
+            <form method="post" class="operation-form">
+              {% csrf_token %}
+              <input type="hidden" name="item_id" value="{{ item.pk }}">
+              <label for="inspection-{{ item.pk }}">Kết quả kiểm tra</label>
+              <select id="inspection-{{ item.pk }}" name="result" required>
+                <option value="">Chọn kết quả</option>
+                {% for value, label in inspection_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+              </select>
+              <label for="return-notes-{{ item.pk }}">Ghi chú tình trạng và phụ kiện</label>
+              <textarea id="return-notes-{{ item.pk }}" name="notes" maxlength="2000" rows="2"></textarea>
+              <button type="submit" name="action" value="inspect">Lưu kết quả kiểm tra</button>
+            </form>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="panel empty-state">Đơn chưa có mã kho được gán. <a href="{% url 'staff-rental-detail' rental.pk %}">Về chi tiết đơn thuê</a>.</li>
+      {% endfor %}
+    </ul>
+    {% if rental.status == 'CONFIRMED' and rows %}
+      {% if can_confirm_pickup %}
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <button type="submit" name="action" value="pick_up">Bàn giao toàn bộ thiết bị</button>
+        </form>
+      {% else %}
+        <p class="notice operation-section">Bàn giao trong kỳ thuê sau khi đã xác nhận chuẩn bị mọi thiết bị.</p>
+      {% endif %}
+    {% endif %}
+  </section>
+  {% if changes %}
+    <section id="changes" class="operation-section" aria-labelledby="review-heading">
+      <h2 id="review-heading">Yêu cầu thay đổi kỳ thuê</h2>
+      <ul class="workspace-rows">
+        {% for change in changes %}
+          <li class="panel order-panel">
+            <h3>{{ change.get_kind_display }} · {{ change.get_status_display }}</h3>
+            <dl class="details order-details">
+              <div><dt>Kỳ đã cam kết lúc gửi yêu cầu</dt><dd>{{ change.old_pickup_date|date:"d/m/Y" }} – {{ change.old_return_date|date:"d/m/Y" }}</dd></div>
+              <div><dt>Kỳ đề nghị</dt><dd>{{ change.pickup_date|date:"d/m/Y" }} – {{ change.return_date|date:"d/m/Y" }}</dd></div>
+              <div><dt>Tiền thuê trước và sau thay đổi</dt><dd>{{ change.old_total_vnd|vnd }} → {{ change.quoted_total_vnd|vnd }}</dd></div>
+              <div><dt>Ngày gửi yêu cầu</dt><dd>{{ change.requested_at|date:"d/m/Y H:i" }}</dd></div>
+            </dl>
+            {% if change.status == 'PENDING' %}
+              <form method="post" action="{% url 'operations-review-change' rental.pk change.pk %}" class="operation-form">
+                {% csrf_token %}
+                <label for="review-note-{{ change.pk }}">Ghi chú quyết định</label>
+                <textarea id="review-note-{{ change.pk }}" name="review_note" maxlength="2000" rows="2"></textarea>
+                <div class="action-row">
+                  <button type="submit" name="decision" value="approve">Duyệt yêu cầu</button>
+                  <button type="submit" name="decision" value="reject" class="button-outline">Từ chối</button>
+                </div>
+              </form>
+            {% else %}
+              <p>Đã xử lý {{ change.reviewed_at|date:"d/m/Y H:i" }}{% if change.reviewed_by %} · {{ change.reviewed_by.get_username }}{% endif %}</p>
+              {% if change.review_note %}<p class="multiline">{{ change.review_note }}</p>{% endif %}
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}

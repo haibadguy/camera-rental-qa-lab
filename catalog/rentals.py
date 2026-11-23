@@ -2,15 +2,16 @@ from django.db import transaction
 from django.db.models import TextChoices
 from django.utils import timezone
 
+from .custody import confirm_asset_pickup, lock_rental
 from .errors import RentalError
 from .inventory import (
     available_stock,
-    checked_out_assets,
     checked_out_quantity,
     free_assets,
     validate_period,
 )
-from .models import AssetReservation, Equipment, Rental, RentalLine
+from .models import AssetHandover, AssetReservation, Equipment, Rental, RentalLine
+from .roles import can_operate
 
 MIN_RENTAL_QUANTITY = 1
 MAX_RENTAL_QUANTITY = 2_147_483_647
@@ -138,7 +139,11 @@ def book_order(customer, pickup_date, return_date, lines, *, require_assets=True
 
 def customer_rentals(customer, *, legacy_only=False):
     rentals = Rental.objects.filter(customer=customer).select_related("equipment")
-    return rentals.filter(equipment__isnull=False) if legacy_only else rentals
+    return (
+        rentals.filter(equipment__isnull=False).exclude(status=Rental.Status.CLOSED)
+        if legacy_only
+        else rentals
+    )
 
 
 def staff_rentals(queue):
@@ -164,29 +169,9 @@ def staff_rentals(queue):
     )
 
 
-def _lock_rental(rentals, rental_id, *, legacy_only=False):
-    if legacy_only:
-        rentals = rentals.filter(equipment__isnull=False)
-    equipment_id = rentals.values_list("equipment_id", flat=True).get(pk=rental_id)
-    equipment_ids = (
-        [equipment_id]
-        if equipment_id
-        else RentalLine.objects.filter(rental_id=rental_id).values_list(
-            "equipment_id", flat=True
-        )
-    )
-    equipment = list(
-        Equipment.objects.select_for_update()
-        .filter(pk__in=equipment_ids)
-        .order_by("pk")
-    )
-    rental = rentals.select_related(None).select_for_update().get(pk=rental_id)
-    return rental, equipment
-
-
 @transaction.atomic
 def cancel_rental(customer, rental_id, *, legacy_only=False):
-    rental, _ = _lock_rental(
+    rental, _ = lock_rental(
         customer_rentals(customer), rental_id, legacy_only=legacy_only
     )
     if not can_cancel(rental, timezone.localdate()):
@@ -199,9 +184,9 @@ def cancel_rental(customer, rental_id, *, legacy_only=False):
 
 @transaction.atomic
 def pick_up_rental(staff, rental_id, *, legacy_only=False):
-    if not staff.is_staff:
+    if not staff.is_staff and not can_operate(staff):
         raise RentalError("Chỉ nhân viên được ghi nhận bàn giao.", 403)
-    rental, equipment = _lock_rental(
+    rental, equipment = lock_rental(
         Rental.objects.all(), rental_id, legacy_only=legacy_only
     )
     now = timezone.now()
@@ -209,21 +194,11 @@ def pick_up_rental(staff, rental_id, *, legacy_only=False):
         raise RentalError(
             "Chỉ bàn giao đơn đã đặt từ ngày nhận đến trước ngày trả.", 409
         )
-    reservations = AssetReservation.objects.filter(
-        line__rental=rental, released_at__isnull=True
-    )
     if all(item.tracks_assets for item in equipment):
-        expected = sum(rental.lines.values_list("quantity", flat=True))
-        enough = (
-            reservations.count() == expected
-            and not checked_out_assets()
-            .filter(asset_id__in=reservations.values("asset_id"))
-            .exists()
-        )
-    else:
-        item = equipment[0]
-        enough = rental.quantity <= item.total_stock - checked_out_quantity(item)
-    if not enough:
+        confirm_asset_pickup(staff, rental, now)
+    elif rental.quantity > equipment[0].total_stock - checked_out_quantity(
+        equipment[0]
+    ):
         raise RentalError(
             "Không đủ thiết bị thực tế để bàn giao. Kiểm tra các đơn chưa trả.", 409
         )
@@ -237,7 +212,7 @@ def pick_up_rental(staff, rental_id, *, legacy_only=False):
 def mark_no_show(staff, rental_id, *, legacy_only=False):
     if not staff.is_staff:
         raise RentalError("Chỉ nhân viên được xử lý khách không đến nhận.", 403)
-    rental, _ = _lock_rental(Rental.objects.all(), rental_id, legacy_only=legacy_only)
+    rental, _ = lock_rental(Rental.objects.all(), rental_id, legacy_only=legacy_only)
     if not can_mark_no_show(rental, timezone.localdate()):
         raise RentalError("Chỉ xử lý đơn chưa bàn giao sau ngày nhận.", 409)
     rental.status = Rental.Status.CANCELLED
@@ -251,10 +226,18 @@ def mark_no_show(staff, rental_id, *, legacy_only=False):
 def return_rental(staff, rental_id, *, legacy_only=False):
     if not staff.is_staff:
         raise RentalError("Chỉ nhân viên được ghi nhận trả.", 403)
-    rental, _ = _lock_rental(Rental.objects.all(), rental_id, legacy_only=legacy_only)
+    rental, _ = lock_rental(Rental.objects.all(), rental_id, legacy_only=legacy_only)
     now = timezone.now()
     if not can_return(rental) or now < rental.picked_up_at:
         raise RentalError("Chỉ ghi nhận trả đơn đã bàn giao.", 409)
+    if AssetHandover.objects.filter(
+        reservation__line__rental=rental, picked_up_at__isnull=False
+    ).exists():
+        raise RentalError(
+            f"Đơn đã bàn giao theo mã kho. Ghi nhận từng món tại /staff/rentals/{rental.pk}/operations/ "
+            f"hoặc /api/v2/operations/rentals/{rental.pk}/.",
+            409,
+        )
     rental.status = Rental.Status.RETURNED
     rental.returned_at = now
     rental.save(update_fields=["status", "returned_at"])
@@ -273,9 +256,9 @@ def can_replace_asset(rental, today):
 
 @transaction.atomic
 def replace_reserved_asset(staff, rental_id, reservation_id, replacement_code):
-    if not staff.is_staff:
+    if not staff.is_staff and not can_operate(staff):
         raise RentalError("Chỉ nhân viên được đổi thiết bị đã giữ.", 403)
-    rental, _ = _lock_rental(Rental.objects.all(), rental_id)
+    rental, _ = lock_rental(Rental.objects.all(), rental_id)
     old = AssetReservation.objects.select_related("line").get(
         pk=reservation_id, line__rental=rental
     )

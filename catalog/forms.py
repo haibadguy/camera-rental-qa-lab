@@ -18,7 +18,9 @@ class PeriodForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["pickup_date"].widget.attrs["min"] = timezone.localdate().isoformat()
+        self.fields["pickup_date"].widget.attrs["min"] = (
+            timezone.localdate().isoformat()
+        )
 
 
 class BookingForm(PeriodForm):
@@ -100,6 +102,7 @@ class EquipmentForm(forms.ModelForm):
             "kind",
             "name",
             "specifications",
+            "accessory_checklist",
             "daily_rate_vnd",
             "total_stock",
             "is_active",
@@ -116,7 +119,10 @@ class EquipmentForm(forms.ModelForm):
         help_texts = {
             "specifications": "Ghi rõ thiết bị và phụ kiện thực tế có trong bộ thuê."
         }
-        widgets = {"specifications": forms.Textarea(attrs={"rows": 4})}
+        widgets = {
+            "specifications": forms.Textarea(attrs={"rows": 4}),
+            "accessory_checklist": forms.Textarea(attrs={"rows": 3}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

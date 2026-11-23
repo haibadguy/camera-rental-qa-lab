@@ -112,6 +112,16 @@ class OrderSerializer(RentalSerializer):
         )
 
 
+class OrderDetailSerializer(OrderSerializer):
+    receipt = serializers.SerializerMethodField()
+
+    class Meta(OrderSerializer.Meta):
+        fields = (*OrderSerializer.Meta.fields, "closed_at", "receipt")
+
+    def get_receipt(self, rental):
+        return services.receipt_summary(rental) if rental.picked_up_at else None
+
+
 def _rental_response(
     operation, *args, success_status=200, serializer=RentalSerializer, **kwargs
 ):
@@ -229,7 +239,7 @@ def orders(request):
 @permission_classes([IsAuthenticated])
 def order_detail(request, rental_id):
     rental = get_object_or_404(services.customer_rentals(request.user), pk=rental_id)
-    return Response(OrderSerializer(rental).data)
+    return Response(OrderDetailSerializer(rental).data)
 
 
 @api_view(["POST"])

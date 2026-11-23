@@ -64,6 +64,7 @@ def main():
     customer.login(username, password)
     customer.request("/staff/equipment/", expected=403)
     staff_name, staff_password = "demo-staff", "camera-demo-2026"
+    staff_credentials = (staff_name, staff_password)
     staff.login(staff_name, staff_password)
     assert "Có thực tế trong kho" in staff.request("/staff/equipment/")
 
@@ -88,11 +89,38 @@ def main():
     order = rental["id"]
     assert "Đã đặt" in customer.request(f"/rentals/{order}/")
     assert api.request(listing_url)[0]["available_stock"] == 1
-    assert "Đã bàn giao" in staff.request(f"/staff/rentals/{order}/pick-up/", form={})
-    result = api.request(
+    ops_url = f"/api/v2/operations/rentals/{order}/"
+    api.request(ops_url, credentials=credentials, expected=403)
+    reservation = api.request(ops_url, credentials=staff_credentials)["reservations"][0]
+    api.request(
+        f"{ops_url}reservations/{reservation['id']}/prepare/",
+        payload={"notes": "Kiểm tra thiết bị trước giao."},
+        credentials=staff_credentials,
+        expected=204,
+    )
+    assert "Đã bàn giao" in staff.request(
+        f"/staff/rentals/{order}/operations/", form={"action": "pick_up"}
+    )
+    api.request(
         f"/api/rentals/{order}/return/",
         payload={},
-        credentials=(staff_name, staff_password),
+        credentials=staff_credentials,
+        expected=409,
+    )
+    handover = api.request(ops_url, credentials=staff_credentials)["handovers"][0]
+    item_url = f"{ops_url}handovers/{handover['id']}/"
+    api.request(
+        f"{item_url}receive/", payload={}, credentials=staff_credentials, expected=204
+    )
+    api.request(
+        f"{item_url}inspect/",
+        payload={"result": "READY"},
+        credentials=staff_credentials,
+        expected=204,
+    )
+    result = api.request(
+        f"/api/rentals/{order}/",
+        credentials=credentials,
     )
     assert (
         result["status"] == "RETURNED"
@@ -115,7 +143,7 @@ def main():
         == "CANCELLED"
     )
     print(
-        "PASS: live registration, login, authorization, catalog, availability, booking, pickup, early return and cancellation"
+        "PASS: live registration, authorization, availability, booking, per-asset pickup, early return, inspection and cancellation"
     )
 
     camera = api.request("/api/equipment/?search=CAM-001")[0]
@@ -128,13 +156,36 @@ def main():
     assert len(multi["lines"]) == 2
     multi_id = multi["id"]
     api.request(f"/api/rentals/{multi_id}/", credentials=credentials, expected=404)
+    changes = f"/api/v2/rentals/{multi_id}/changes/"
+    proposed = {
+        "kind": "RESCHEDULE",
+        "pickup_date": (tomorrow + timedelta(days=2)).isoformat(),
+        "return_date": (tomorrow + timedelta(days=4)).isoformat(),
+    }
+    quote = api.request(changes + "quote/", payload=proposed, credentials=credentials)
+    assert quote["consent_required"] and quote["total_vnd"] == "900000"
+    change = api.request(
+        changes,
+        payload=proposed | {"accepted_total_vnd": quote["total_vnd"]},
+        credentials=credentials,
+        expected=201,
+    )
+    review = api.request(
+        f"/api/v2/operations/changes/{change['id']}/review/",
+        payload={"approve": True},
+        credentials=staff_credentials,
+    )
+    assert review["status"] == "APPROVED"
+    assert "Đã duyệt" in customer.request(f"/rentals/{multi_id}/")
     calendar = staff.request(f"/staff/equipment/{camera['id']}/assets/")
     assert f"Đơn #{multi_id}" in calendar and "CAM-001-U" in calendar
     cancelled = api.request(
         f"/api/v2/rentals/{multi_id}/cancel/", payload={}, credentials=credentials
     )
     assert cancelled["status"] == "CANCELLED"
-    print("PASS: multi-SKU web booking, staff asset calendar, v2 API and full cancellation")
+    print(
+        "PASS: multi-SKU web booking, v2 quote and approval, staff asset calendar and full cancellation"
+    )
 
 
 if __name__ == "__main__":

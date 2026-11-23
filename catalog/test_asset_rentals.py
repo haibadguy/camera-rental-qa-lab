@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.db import IntegrityError, connection, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase
@@ -10,7 +11,15 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from . import services
-from .models import AssetReservation, AssetUnit, Equipment, Rental, RentalLine
+from .models import (
+    AssetHandover,
+    AssetReservation,
+    AssetUnit,
+    Equipment,
+    Rental,
+    RentalLine,
+)
+from .roles import OPERATOR_GROUP
 
 
 class AssetRentalTests(TestCase):
@@ -184,6 +193,7 @@ class AssetRentalTests(TestCase):
         )
 
     def test_handover_checks_physical_asset_and_early_return_keeps_schedule(self):
+        self.staff.groups.add(Group.objects.get(name=OPERATOR_GROUP))
         today = timezone.localdate()
         tomorrow = today + timedelta(days=1)
         next_day = tomorrow + timedelta(days=1)
@@ -191,21 +201,100 @@ class AssetRentalTests(TestCase):
         next_order = services.book_rental(
             self.customer, self.lens.pk, tomorrow, next_day, 1
         )
+        hold = AssetReservation.objects.get(line__rental=first)
+        handover = services.prepare_asset(self.staff, first.pk, hold.pk)
         services.pick_up_rental(self.staff, first.pk)
         # Transfer the scenario to the next day without rewriting the stored periods.
-        with patch(
-            "catalog.rentals.timezone.now",
-            return_value=timezone.now() + timedelta(days=1),
-        ), self.assertRaisesMessage(
-            services.RentalError, "Không đủ thiết bị thực tế"
+        with (
+            patch(
+                "catalog.rentals.timezone.now",
+                return_value=timezone.now() + timedelta(days=1),
+            ),
+            self.assertRaisesMessage(services.RentalError, "Không đủ thiết bị thực tế"),
         ):
             services.pick_up_rental(self.staff, next_order.pk)
-        services.return_rental(self.staff, first.pk)
+        services.receive_asset(self.staff, first.pk, handover.pk)
+        services.inspect_asset(
+            self.staff, first.pk, handover.pk, AssetHandover.Inspection.READY
+        )
         self.assertEqual(services.available_stock(self.lens, today, tomorrow), 0)
         self.assertEqual(services.checked_out_quantity(self.lens), 0)
 
 
 class AssetLineMigrationTests(TransactionTestCase):
+    def test_0005_upgrade_preserves_open_custody_without_inventing_item_timestamps(
+        self,
+    ):
+        before = [("catalog", "0005_asset_units_and_rental_lines")]
+        executor = MigrationExecutor(connection)
+        latest = executor.loader.graph.leaf_nodes()
+        try:
+            executor.migrate(before)
+            previous = executor.loader.project_state(before).apps
+            users = previous.get_model("auth", "User").objects
+            customer = users.create(username="m1-customer")
+            staff = users.create(username="m1-staff", is_staff=True)
+            item = previous.get_model("catalog", "Equipment").objects.create(
+                code="M1",
+                name="Máy V2-M1",
+                daily_rate_vnd=200,
+                total_stock=1,
+                tracks_assets=True,
+            )
+            asset = previous.get_model("catalog", "AssetUnit").objects.create(
+                equipment=item,
+                code="M1-1",
+            )
+            today = timezone.localdate()
+            yesterday = today - timedelta(days=1)
+            picked_up_at = timezone.now() - timedelta(days=1)
+            rental = previous.get_model("catalog", "Rental").objects.create(
+                customer=customer,
+                equipment=item,
+                quantity=1,
+                daily_rate_vnd=123,
+                total_vnd=123,
+                status="PICKED_UP",
+                pickup_date=yesterday,
+                return_date=today,
+                picked_up_at=picked_up_at,
+            )
+            line = previous.get_model("catalog", "RentalLine").objects.create(
+                rental=rental,
+                equipment=item,
+                quantity=1,
+                daily_rate_vnd=123,
+                total_vnd=123,
+            )
+            hold = previous.get_model("catalog", "AssetReservation").objects.create(
+                line=line,
+                asset=asset,
+                period=(yesterday, today),
+            )
+
+            MigrationExecutor(connection).migrate(latest)
+            upgraded = Rental.objects.get(pk=rental.pk)
+            self.assertEqual(upgraded.picked_up_at, picked_up_at)
+            self.assertEqual(upgraded.status, Rental.Status.PICKED_UP)
+            self.assertEqual(upgraded.total_vnd, 123)
+            self.assertEqual(upgraded.lines.get().pk, line.pk)
+            self.assertEqual(
+                AssetReservation.objects.get(pk=hold.pk).asset_id, asset.pk
+            )
+            self.assertFalse(AssetHandover.objects.exists())
+            equipment = Equipment.objects.get(pk=item.pk)
+            self.assertEqual(services.checked_out_quantity(equipment), 1)
+            self.assertEqual(
+                services.available_stock(equipment, today, today + timedelta(days=1)), 0
+            )
+            returned = services.return_rental(
+                get_user_model().objects.get(pk=staff.pk), upgraded.pk
+            )
+            self.assertEqual(returned.status, Rental.Status.RETURNED)
+            self.assertEqual(services.checked_out_quantity(equipment), 0)
+        finally:
+            MigrationExecutor(connection).migrate(latest)
+
     def test_0004_upgrade_backfills_snapshots_and_reports_active_orders(self):
         old_schema = [("catalog", "0004_equipment_catalog")]
         executor = MigrationExecutor(connection)
@@ -244,7 +333,9 @@ class AssetLineMigrationTests(TransactionTestCase):
                 )
             snapshot = list(records.order_by("pk").values())
             MigrationExecutor(connection).migrate(latest)
-            self.assertEqual(list(Rental.objects.order_by("pk").values()), snapshot)
+            upgraded = list(Rental.objects.order_by("pk").values(*snapshot[0]))
+            self.assertEqual(upgraded, snapshot)
+            self.assertFalse(Rental.objects.filter(closed_at__isnull=False).exists())
             self.assertEqual(
                 list(
                     RentalLine.objects.order_by("rental_id").values_list(

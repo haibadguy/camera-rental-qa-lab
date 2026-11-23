@@ -1,5 +1,30 @@
 # Trạng thái xác minh Camera Rental
 
+## V2-M2 · 24/11/2026
+
+**Pass local, sẵn sàng cho review PR.** Bản runtime `376ddf9bc1a771aae46419f75e684089afe7cd91` được dựng từ `git archive`. SHA-256 của 36 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19. Project `camera-v2-m2-review-08b87860` chạy cổng 18049 trên volume mới.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Compose, Django và migrations | **Pass**, Verify exit 0. Build, DB/web healthy, seed demo, system check và cài mới `catalog.0001`–`0006` đạt. Drift check báo `No changes detected`. |
+| Suite PostgreSQL | **Pass**, 53/53 trong 11,049 giây. Nâng từ `0002`, `0004`, `0005`; giữ giá, lịch, trạng thái và timestamp. Đơn đang ở ngoài kho từ M1 nhận trả được qua luồng cũ. Kiểm quyền khách, nhân viên, quản lý, nhận trả một phần và đóng ngoại lệ. |
+| Tranh chấp PostgreSQL | **Pass**, chạy riêng 5/5 trong 1,016 giây. Đặt một SKU, đặt nhiều SKU theo thứ tự ngược, bàn giao đồng thời, đặt cạnh đổi kỳ và đặt cạnh bảo trì. |
+| HTTP smoke | **Pass**. Đăng ký, đăng nhập, tra tồn, đặt, chuẩn bị và giao theo mã kho, nhận trả sớm, kiểm tra và hủy. API v1 trả `409` khi cố trả nguyên đơn đã giao theo mã kho. Đơn nhiều SKU qua Web được báo giá lại, phê duyệt qua API v2, hiện trên lịch kho và hủy cả đơn. |
+| Chrome headless | **Pass** ở 1440 × 1000, 390 × 844 và 320 × 780. Dùng hai mã kho cho mỗi SKU kiểm thử `V2UI-1440`, `V2UI-390`, `V2UI-320`. Khách đặt và yêu cầu đổi lịch, nhân viên duyệt rồi chuẩn bị, giao và nhận từng món, kiểm hư hỏng, ghi sửa, lên lịch bảo trì. Quản lý mở lại tồn. Khách thấy 1/2 rồi 2/2 món đã nhận. Ba đơn #5–#7 có kỳ sau đổi là 24–26/11/2026. Đã xem ảnh màn báo giá, hàng đợi, giao nhận và quyết định quản lý. Không tràn ngang, lỗi JS hoặc HTTP 5xx trong luồng đã chạy. |
+| GitHub Actions | **Not Run**. Nhánh local chờ duyệt push. |
+
+Chạy từ archive của SHA trên. Override IPAM tạm ở ngoài repo dùng subnet `10.250.49.0/24` sau khi đối chiếu các mạng Compose có sẵn.
+
+```powershell
+$env:COMPOSE_FILE = "compose.yaml;$env:TEMP\camera-v2-m2-network-49.yaml"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-v2-m2-review -Port 18049
+docker exec camera-v2-m2-review-08b87860-web-1 python manage.py test catalog.tests.ConcurrentBookingTests catalog.test_schedule_changes.RentalChangeConcurrencyTests catalog.test_maintenance.ConcurrentMaintenanceTests --verbosity 2
+```
+
+Để lặp lượt trình duyệt trên máy đã kiểm chứng, dùng fixture `browser_fixture.py` và script `v2-m2-review.cjs` trong thư mục tạm `camera-v2-m2-browser-review`. Fixture thêm một tài khoản kiểm thử và ba SKU biệt lập. Quyền manager cấp qua `set_rental_role`. Script chạy với `CAMERA_M2_URL=http://127.0.0.1:18049` và `CAMERA_M2_PLAYWRIGHT` trỏ đến Playwright Core cài local.
+
+Lượt đầu đạt 50 test nhưng smoke còn theo quy trình bàn giao cũ. Một lượt dựng sau đó gặp lỗi Docker dừng với exit 137. Bản archive `a21c575` phát hiện thiếu auth context processor, làm ẩn liên kết vận hành và bảo trì trên Web. Đã sửa và chạy lại toàn bộ trên project mới. Các volume cũ được giữ.
+
 ## V2-M1 · 23/11/2026
 
 **Đã kiểm chứng local, sẵn sàng mở PR.** Commit ứng viên `8556e035130c3e517f0ffce65ea294dbf3e53c75` trên `feature/v2-m1`. Đối chiếu SHA-256 của 22 tệp runtime và test thay đổi với container đang phục vụ, tất cả khớp.
@@ -24,6 +49,10 @@ node "$env:TEMP\camera-rental-browser-5fe17aed\v2-m1-review.cjs"
 ```
 
 Các volume hiện có được giữ. Chuyển một SKU v1 đang có đơn chưa đối soát bị chặn theo [quy trình nâng dữ liệu](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho).
+
+### CI V2-M1 trên GitHub
+
+Sau lượt xác minh local ở trên, GitHub Actions đạt ở cả push và PR cho `8f79b5777f52a2a962288961debb7e6ecd95e495`. PR #5 đã merge vào `main` tại `9f7e3f502725f6d440062f00088810d3a8bebfce` và CI sau merge đạt trên cùng SHA. [PR #5](https://github.com/haibadguy/camera-rental-qa-lab/pull/5) · [CI push](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45096287167) · [CI PR](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45096319290) · [CI main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45096877293)
 
 ## Base v1.0
 

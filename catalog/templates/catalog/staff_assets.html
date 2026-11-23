@@ -9,7 +9,7 @@
       <p>{{ assets|length }} thiết bị đã đăng ký{% if not equipment.tracks_assets %} / {{ equipment.total_stock }} theo tồn v1{% endif %}</p>
       <ul>
         {% for asset in assets %}
-          <li><strong>{{ asset.code }}</strong>{% if asset.serial %} · {{ asset.serial }}{% endif %}</li>
+          <li><strong>{{ asset.code }}</strong>{% if asset.serial %} · {{ asset.serial }}{% endif %} · {{ asset.get_status_display }}</li>
         {% empty %}
           <li>Chưa đăng ký mã kho.</li>
         {% endfor %}
@@ -44,9 +44,13 @@
       {% for hold in calendar %}
         <li class="panel workspace-row asset-calendar-row">
           <strong>{{ hold.asset.code }}</strong>
-          <a href="{% url 'staff-rental-detail' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a>
+          {% if hold.maintenance_id %}
+            {% if perms.catalog.operate_rentals %}<a href="{% url 'maintenance-detail' hold.maintenance_id %}">Bảo trì #{{ hold.maintenance_id }}</a>{% else %}<span>Bảo trì</span>{% endif %}
+          {% else %}
+            <a href="{% url 'staff-rental-detail' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a>
+          {% endif %}
           <span>{{ hold.period.lower|date:"d/m/Y" }} – {{ hold.period.upper|date:"d/m/Y" }}</span>
-          <span>{% if hold.released_at %}Đã giải phóng{% else %}{{ hold.line.rental.get_status_display }}{% endif %}</span>
+          <span>{% if hold.released_at %}Đã giải phóng{% elif hold.maintenance_id %}{{ hold.maintenance.get_state_display }}{% else %}{{ hold.line.rental.get_status_display }}{% endif %}</span>
         </li>
       {% empty %}
         <li class="panel empty-state">Chưa có lịch giữ cho mẫu này.</li>

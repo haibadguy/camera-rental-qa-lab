@@ -1,0 +1,14 @@
+{% extends "catalog/base.html" %}
+{% block title %}{% if planned %}Đặt lịch bảo trì{% else %}Ghi sự cố{% endif %} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'maintenance-list' %}">Bảo trì và sự cố</a></nav>
+  <div class="page-heading"><h1>{% if planned %}Đặt lịch bảo trì{% else %}Ghi sự cố thiết bị{% endif %}</h1></div>
+  <form method="post" class="panel form-panel period-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="actions">
+      <button type="submit">{% if planned %}Lưu lịch bảo trì{% else %}Lưu sự cố{% endif %}</button>
+      <a class="button button-outline" href="{% url 'maintenance-list' %}">Về danh sách</a>
+    </div>
+  </form>
+{% endblock %}

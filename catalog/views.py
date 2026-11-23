@@ -176,19 +176,39 @@ def my_rentals(request):
 
 def _rental_detail(request, rental, *, staff=False, error=None):
     today = timezone.localdate()
+    handovers = services.rental_handovers(rental)
+    item_pickup = bool(
+        staff
+        and rental.status == Rental.Status.CONFIRMED
+        and rental.lines.filter(equipment__tracks_assets=True).exists()
+    )
+    item_return = bool(
+        staff
+        and rental.status == Rental.Status.PICKED_UP
+        and handovers.filter(picked_up_at__isnull=False).exists()
+    )
     context = {
         "rental": rental,
         "staff_view": staff,
         "can_cancel": not staff and services.can_cancel(rental, today),
-        "can_pick_up": staff and services.can_pick_up(rental, today),
+        "can_pick_up": staff
+        and not item_pickup
+        and services.can_pick_up(rental, today),
         "can_mark_no_show": staff and services.can_mark_no_show(rental, today),
-        "can_return": staff and services.can_return(rental),
+        "can_return": staff and not item_return and services.can_return(rental),
         "can_replace_asset": staff and services.can_replace_asset(rental, today),
         "error": error,
         "rental_store": settings.RENTAL_STORE,
     }
     if staff:
         context["asset_history"] = services.rental_asset_history(rental)
+        context["show_operations"] = services.can_operate(request.user)
+        context["requires_operations"] = item_pickup or item_return
+    else:
+        context["change_kind"] = services.change_kind(rental)
+        context["changes"] = rental.changes.all()
+        if rental.picked_up_at:
+            context["receipt"] = services.receipt_summary(rental)
     return render(
         request,
         "catalog/rental_detail.html",
@@ -271,7 +291,7 @@ def cancel(request, rental_id):
 @login_required
 @require_safe
 def staff_rentals(request):
-    if not request.user.is_staff:
+    if not request.user.is_staff and not services.can_operate(request.user):
         raise PermissionDenied
     queues = services.StaffRentalQueue
     queue = request.GET.get("queue", queues.ALL)
@@ -293,7 +313,7 @@ def staff_rentals(request):
 @login_required
 @require_safe
 def staff_rental_detail(request, rental_id):
-    if not request.user.is_staff:
+    if not request.user.is_staff and not services.can_operate(request.user):
         raise PermissionDenied
     rental = get_object_or_404(
         Rental.objects.select_related("equipment", "customer"), pk=rental_id
@@ -336,7 +356,7 @@ def record_return(request, rental_id):
 @login_required
 @require_POST
 def replace_asset(request, rental_id, reservation_id):
-    if not request.user.is_staff:
+    if not request.user.is_staff and not services.can_operate(request.user):
         raise PermissionDenied
     code = request.POST.get("replacement_code", "").strip()
     try:

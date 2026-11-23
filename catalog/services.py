@@ -1,5 +1,6 @@
-"""Shared rental and inventory operations for the web and API."""
+"""Shared business entry points for the web and API."""
 
+from .custody import prepare_asset, receipt_summary, receive_asset, rental_handovers
 from .equipment import (
     catalog_items,
     create_equipment,
@@ -19,6 +20,14 @@ from .inventory import (
     unassigned_legacy_rentals,
     validate_period,
 )
+from .maintenance import (
+    maintenance_cases,
+    plan_maintenance,
+    report_incident,
+    resolve_case,
+    start_repair,
+)
+from .operations import inspect_asset, ops_rentals
 from .rentals import (
     MAX_RENTAL_QUANTITY,
     MIN_RENTAL_QUANTITY,
@@ -38,6 +47,13 @@ from .rentals import (
     return_rental,
     staff_rentals,
 )
+from .roles import can_manage, can_operate
+from .schedule_changes import (
+    change_kind,
+    preview_rental_change,
+    request_rental_change,
+    review_rental_change,
+)
 
 __all__ = [
     "MAX_RENTAL_DAYS",
@@ -50,25 +66,42 @@ __all__ = [
     "book_order",
     "book_rental",
     "can_cancel",
+    "can_manage",
     "can_mark_no_show",
+    "can_operate",
     "can_pick_up",
     "can_replace_asset",
     "can_return",
     "cancel_rental",
     "catalog_availability",
     "catalog_items",
+    "change_kind",
     "checked_out_quantity",
     "create_equipment",
     "customer_rentals",
     "enable_asset_tracking",
     "equipment_with_physical_stock",
+    "inspect_asset",
+    "maintenance_cases",
     "mark_no_show",
+    "ops_rentals",
     "pick_up_rental",
+    "plan_maintenance",
+    "prepare_asset",
+    "preview_rental_change",
+    "receipt_summary",
+    "receive_asset",
     "register_asset",
     "rental_asset_history",
+    "rental_handovers",
     "replace_reserved_asset",
+    "report_incident",
+    "request_rental_change",
+    "resolve_case",
     "return_rental",
+    "review_rental_change",
     "staff_rentals",
+    "start_repair",
     "unassigned_legacy_rentals",
     "update_equipment",
     "validate_period",

@@ -1,9 +1,9 @@
 # AGENTS.md — Camera Rental Product Development
 
 ## Mission
-Develop Camera Rental as a rental operations product. Base v1.0 is the frozen technical foundation. The current goal is v2.0 Complete Rental Operations. Work on product development and developer verification only.
+Develop Camera Rental Management System as a medium-sized business application for one professional camera rental store. Cover booking, rental operations, maintenance, counter settlement and management reporting. Base v1.0 is the frozen technical foundation and V2-M1 is integrated into main. Work on product development and developer verification only.
 
-Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md](PROJECT_PLAN.md) to locate the current work, [the v2.0 proposal](docs/v2-product-design.md) for proposed scope, and [docs/verification.md](docs/verification.md) for recorded Base evidence.
+Follow [ROADMAP.md](ROADMAP.md) for V2-M2 through V2-M5 and release gates. Use [PROJECT_PLAN.md](PROJECT_PLAN.md) for the current work, [the product design](docs/v2-product-design.md) for scope and pending policy decisions, and [docs/verification.md](docs/verification.md) for recorded evidence. Obtain Hải's approval for the relevant policies before starting a milestone, then execute the approved work through verification.
 
 ## Read first
 1. Inspect `git status`, active branch, staged and untracked files.
@@ -11,23 +11,22 @@ Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md
 3. Prefer current verified code/approved requirements over assumptions or stale conversation summaries. Identify mismatches, do not silently overwrite decisions.
 
 ## Architecture constraints
-- Retain Django + Django Templates + DRF + PostgreSQL + Docker Compose.
+- Retain Django, Django Templates and JavaScript, DRF, PostgreSQL, Docker Compose and GitHub Actions.
 - Keep a modular monolith. Keep the `catalog` Django app label and migrations stable unless change is demonstrably safe and explicitly approved.
-- Give each domain rule one authoritative implementation. Views/API are adapters; use shared domain services. Avoid circular dependencies and speculative abstractions.
-- Use `catalog/services.py` as the shared entry point for web and API. Implement equipment and list prices in `catalog/equipment.py`, stock rules in `catalog/inventory.py`, and booking and rental transitions in `catalog/rentals.py`. Keep registration in `catalog/views.py` using Django auth.
-- Do not move ORM models between Django apps casually. Do not rewrite a working module for style alone.
+- Give each domain rule one owner. Web and DRF call `catalog/services.py`. Keep domain dependencies acyclic and registration on Django auth. [Module ownership](docs/architecture.md#kiến-trúc-mục-tiêu)
+- Keep ORM models and migrations in `catalog`. Split an adapter, module or set of templates when its responsibilities justify the move. Preserve caller contracts and verify the affected paths.
 
 ## Business invariants
 - Dates: start-inclusive, end-exclusive; 1–30 days; no past start; Asia/Ho_Chi_Minh.
 - Price calculation performed server-side; booking stores price snapshot.
-- Lifecycle: CONFIRMED -> PICKED_UP -> RETURNED; CONFIRMED -> CANCELLED; no-show uses documented reason. Early/late returns record actual timestamps; scheduled and physical availability differ.
+- Lifecycle: CONFIRMED -> PICKED_UP -> RETURNED; CONFIRMED -> CANCELLED with documented no-show reason where applicable. V2-M2 records receipt and inspection separately for each asset. Confirmed loss can close a rental with its own timestamp. Early return preserves the promised schedule.
 - Prevent booking and pickup over-allocation with PostgreSQL transactions and real database concurrency tests. Lock `Equipment` before `Rental` in operations that affect stock.
 - Enforce ownership/roles on backend and DRF, not through UI visibility alone. Preserve booking history.
 - Identify the requirement ID, scope and acceptance criteria before edits. Resolve scope questions against `docs/requirements.md` for Base and owner-approved v2 requirements for new work. Report conflicts and obtain Hải's approval before adding a business rule or changing the stack.
 
 ## Code and UI quality
 - Prefer small, clear changes and idiomatic Django. No duplicate rules, needless dependencies, empty scaffolding, fake features or generated filler.
-- Consistent templates, accessible forms, responsive layouts, useful empty/loading/error/success states.
+- Use consistent templates, accessible forms and responsive customer, staff and manager interfaces. Reports must derive from recorded business data and define their metrics.
 - All interactive controls must work. Do not fake external integrations or use unlicensed images.
 - Keep docs true to current implementation; do not create documentation for its own sake.
 
@@ -46,7 +45,7 @@ Follow [ROADMAP.md](ROADMAP.md) for milestones and G0–G4. Use [PROJECT_PLAN.md
 - CI must actually run on an approved pushed branch before release readiness.
 
 ## Definition of Done
-A change is done when behavior meets the approved scope; relevant tests have run; diff is reviewed; no related regression is known; updated docs match code; and outstanding limitations are reported. Release readiness requires working end-to-end customer and staff journeys, verified migrations and concurrency, reproducible Docker, green CI on the candidate, maintainable code and owner approval.
+A change is done when behavior meets the approved scope; relevant tests have run; diff is reviewed; no related regression is known; updated docs match code; and outstanding limitations are reported. Release readiness requires working end-to-end customer, staff and manager journeys, verified migrations and concurrency, reproducible Docker, green CI on the candidate, maintainable code and owner approval.
 
 ## Handoff format
 Always summarize: (1) what changed/why, (2) files, (3) tests actually run and outputs, (4) blockers/risks, (5) Git status and next action. For large tasks save durable state in a concise document only if needed; avoid oversized progress files.

@@ -1,0 +1,56 @@
+{% extends "catalog/base.html" %}
+{% block title %}Vận hành thuê | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'staff-rentals' %}">Quản lý đơn thuê</a></nav>
+  <div class="page-heading">
+    <h1>Vận hành thuê</h1>
+    <a class="button button-outline" href="{% url 'maintenance-list' %}">Bảo trì và sự cố</a>
+  </div>
+  {% if pending_changes %}
+    <section class="panel order-panel operation-section" aria-labelledby="pending-changes">
+      <h2 id="pending-changes">Yêu cầu đổi kỳ cần duyệt</h2>
+      <ul>
+        {% for change in pending_changes %}
+          <li><a href="{% url 'operations-order' change.rental_id %}#changes">Đơn #{{ change.rental_id }}</a> · {{ change.get_kind_display }} · {{ change.return_date|date:"d/m/Y" }}</li>
+        {% endfor %}
+      </ul>
+      {% if pending_changes.has_other_pages %}
+        <nav class="actions" aria-label="Trang yêu cầu đổi kỳ">
+          {% if pending_changes.has_previous %}<a href="?queue={{ active_queue }}&amp;changes_page={{ pending_changes.previous_page_number }}">Trang trước</a>{% endif %}
+          <span>Trang {{ pending_changes.number }} / {{ pending_changes.paginator.num_pages }}</span>
+          {% if pending_changes.has_next %}<a href="?queue={{ active_queue }}&amp;changes_page={{ pending_changes.next_page_number }}">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </section>
+  {% endif %}
+  <nav class="kind-tabs staff-queues" aria-label="Hàng đợi đơn thuê">
+    {% for value, label in queues %}
+      <a href="?queue={{ value }}"{% if value == active_queue %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <ul class="workspace-rows">
+    {% for rental in page %}
+      <li class="panel workspace-row operation-queue-row">
+        <div>
+          <h2><a class="row-link" href="{% url 'operations-order' rental.pk %}">Đơn #{{ rental.pk }}</a></h2>
+          <p class="muted">{{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</p>
+        </div>
+        <div>
+          <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+          {% if rental.ops_at_risk %}<p class="status-warning">Cần xác nhận thiết bị trước khi giao</p>{% endif %}
+          {% if rental.ops_waiting_inspection %}<p class="muted">Có thiết bị chờ kiểm tra</p>{% endif %}
+          {% if rental.is_overdue %}<p class="status-warning">Quá hạn trả</p>{% endif %}
+        </div>
+      </li>
+    {% empty %}
+      <li class="panel empty-state">Không có đơn trong hàng đợi này.</li>
+    {% endfor %}
+  </ul>
+  {% if page.has_other_pages %}
+    <nav class="actions" aria-label="Trang hàng đợi">
+      {% if page.has_previous %}<a href="?queue={{ active_queue }}&amp;page={{ page.previous_page_number }}">Trang trước</a>{% endif %}
+      <span>Trang {{ page.number }} / {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?queue={{ active_queue }}&amp;page={{ page.next_page_number }}">Trang sau</a>{% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}
