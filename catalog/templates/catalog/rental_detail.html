@@ -48,13 +48,18 @@
           {% if can_return %}<form method="post" action="{% url 'return-rental' rental.pk %}">{% csrf_token %}<button>Ghi nhận trả</button></form>{% endif %}
         </div>
       {% endif %}
+      {% if staff_view and perms.catalog.record_rental_finance %}
+        <div class="actions"><a class="button button-outline" href="{% url 'finance-ledger' rental.pk %}">Quyết toán tại quầy</a></div>
+      {% endif %}
       {% if requires_operations and not show_operations %}<p class="muted">Đơn này cần nhân viên có quyền giao nhận theo mã kho.</p>{% endif %}
     </section>
     <aside class="panel order-summary" aria-labelledby="payment-heading">
       <h2 id="payment-heading">Chi phí thuê</h2>
-      <dl class="details">
-        <div class="order-total"><dt>Tổng tiền</dt><dd>{{ rental.total_vnd|vnd }}</dd></div>
-      </dl>
+      {% if finance %}
+        {% include "catalog/finance_summary.html" with summary=finance %}
+      {% else %}
+        <dl class="details"><div class="order-total"><dt>Tổng tiền thuê</dt><dd>{{ rental.total_vnd|vnd }}</dd></div></dl>
+      {% endif %}
     </aside>
   </div>
   {% if changes %}

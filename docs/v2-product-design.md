@@ -41,7 +41,7 @@ Tám phân hệ là ranh giới nghiệp vụ trong cùng một modular monolith
 
 ## Quyết định trước V2-M2
 
-Hải đã duyệt năm chính sách dưới đây ngày 23/11/2026 trong phiên làm việc V2-M2. Các chính sách là căn cứ triển khai và nghiệm thu mốc này. Các quyết định cho M3–M5 nằm cuối mục.
+Hải đã duyệt năm chính sách dưới đây ngày 23/11/2026. Các chính sách là căn cứ triển khai và nghiệm thu V2-M2.
 
 | Quyết định | Chính sách đã duyệt | Đánh đổi |
 | --- | --- | --- |
@@ -51,4 +51,22 @@ Hải đã duyệt năm chính sách dưới đây ngày 23/11/2026 trong phiên
 | **4. Mất, hỏng, thiếu phụ kiện và bảo trì** | Nhân viên ghi sự cố và cách ly ngay món chưa đủ điều kiện cho thuê. Hiển thị các đơn kế tiếp bị ảnh hưởng và cho đổi cùng SKU khi đủ lịch. Bảo trì đã lên lịch phải kiểm xung đột trước khi lưu. Quản lý duyệt đóng sự cố, đưa máy đã kiểm tra đạt về kho hoặc loại khỏi vòng thuê. Đơn có món được xác nhận mất được đóng có ngoại lệ với dấu thời gian quyết định riêng. | Quản lý có thêm bước duyệt nhưng truy được ai cho máy vào lại kho hoặc đóng món mất. Hồ sơ sự cố cung cấp dữ liệu cho M3. Quy tắc bồi thường, phí và khấu trừ cần duyệt riêng. |
 | **5. Quyền vận hành và liên hệ** | Dùng nhóm và quyền Django. Khách xem đơn của mình. Nhân viên chuẩn bị, đổi lịch, giao nhận và ghi sự cố. Quản lý xử lý mất, duyệt ngoại lệ và mở lại tồn sau bảo trì. Hiển thị trạng thái trên đơn và dùng kênh liên hệ hiện có của cửa hàng. | Nếu cần lưu số liên hệ riêng trên đơn, chốt mục đích, quyền đọc và thời hạn giữ thông tin. Đối chiếu quyền hiện tại trước khi gán nhóm cho tài khoản nhân viên cũ. |
 
-**Trước V2-M3**, Hải duyệt đơn giá áp dụng cho các trường hợp ngoài kỳ gốc, mức cọc, thời điểm thu, điều kiện và thời hạn hoàn, phí hoặc trách nhiệm bồi thường, quyền miễn hay khấu trừ và xử lý tiền đã thu khi giao thất bại. **Trước V2-M4**, chốt định nghĩa doanh thu, tỷ lệ sử dụng và cách xử lý chênh lệch kiểm kê. **Trước V2-M5**, chốt cửa hàng pilot, dữ liệu được phép dùng, phương án chuyển dữ liệu và hợp đồng API cũ. [Kiến trúc và điểm chuyển dữ liệu](architecture.md#kiến-trúc-mục-tiêu) · [Điều kiện phát hành](../ROADMAP.md#roadmap-v20)
+## Quyết định trước V2-M3
+
+**Hải đã duyệt ngày 24/11/2026.** V2-M3 ghi nhận giao dịch thực tế tại quầy bằng VND. Sổ theo dõi riêng tiền thuê và cọc bảo đảm, gồm số phải thu, số đã thu, số còn phải trả và số còn phải hoàn.
+
+| Quyết định | Chính sách đã duyệt |
+| --- | --- |
+| **1. Giá khi đổi kỳ, gia hạn, trả sớm và trả trễ** | Đổi hoặc gia hạn đã duyệt vẫn dùng đơn giá ngày chốt trên từng dòng. Chênh lệch được cộng vào hoặc trừ khỏi tiền thuê phải thu, theo mức khách đã chấp thuận khi giá đổi. Khoản tăng trước bàn giao cần thu đủ khi giao. Khoản tăng do gia hạn sau bàn giao được thu chậm nhất lúc quyết toán. Trả sớm giữ giá kỳ đã cam kết. Trả trễ đưa vào quy trình ngoại lệ ở mục 4. |
+| **2. Mức cọc và thời điểm thu** | Quản lý cấu hình cọc theo mẫu thiết bị, mặc định 0 ₫ khi chưa cấu hình. Cọc của đơn bằng tổng mức đã chốt trên từng dòng nhân số lượng. Với đơn mới áp dụng V2-M3, nhân viên ghi nhận tiền mặt hoặc chuyển khoản đã nhận và kiểm đủ tiền thuê cùng cọc trước khi xác nhận bàn giao. Có thể ghi nhiều lần thu trên cùng đơn. |
+| **3. Điều kiện và thời điểm hoàn** | Quyết toán sau khi nhận và kiểm đủ món hoặc đã đóng ngoại lệ từng món với phê duyệt của quản lý. Hoàn cọc còn dư sau khấu trừ đã duyệt và tiền thuê thu dư do đổi kỳ. Hoàn trong lần quyết toán khi thực hiện được. Nếu chưa chuyển trả, số còn phải hoàn tiếp tục hiện trên đơn. Ghi nhận hoàn tại thời điểm thực trả. |
+| **4. Phí, bồi thường, miễn và khấu trừ** | Hồ sơ trả trễ, hỏng, mất hoặc thiếu phụ kiện là căn cứ để nhân viên đề xuất khoản thu. Quản lý duyệt số tiền, lý do và hồ sơ nguồn, đồng thời quyết định miễn bớt hoặc dùng phần cọc còn giữ để khấu trừ khoản đã duyệt. Phần vượt cọc vẫn là khoản phải thu. Điều chỉnh sau khi ghi sổ có bản ghi riêng liên kết giao dịch gốc. |
+| **5. Giao thất bại, hủy và dữ liệu cũ** | Nếu cửa hàng chưa giao được và đơn vẫn mở để đổi kỳ, theo dõi tiền đã thu trên cùng đơn. Khi đơn bị hủy hoặc xác nhận `NO_SHOW` trước bàn giao, tiền phải thu về 0 và toàn bộ tiền đã thu chuyển thành số cần hoàn. Với đơn có trước V2-M3, giữ giá và lịch sử giao nhận. Đánh dấu khoản thu cũ chưa đối soát, chỉ ghi số đã thu khi có chứng từ và quản lý duyệt. Đơn cũ tiếp tục giao nhận theo quyền và luồng hiện tại trong thời gian đối soát. |
+
+### Tiêu chí nghiệm thu V2-M3
+
+- Khách chỉ thấy số tiền trên đơn của mình. Nhân viên được phân quyền ghi khoản đã thu hoặc thực hoàn. Việc duyệt phí, miễn, khấu trừ và điều chỉnh thuộc quản lý.
+- Gửi lại cùng một thao tác chỉ ghi một giao dịch. Các thao tác đồng thời kiểm tra và cập nhật số dư nguyên tử. Số hoàn hoặc khấu trừ bị chặn nếu vượt khoản tương ứng đang giữ.
+- Kiểm luồng thu đủ rồi giao, gia hạn có chênh lệch, hoàn cọc sau trả đủ, xử lý sự cố có khấu trừ, hủy trước giao có tiền đã thu, và nâng dữ liệu đơn cũ. Sổ tiền truy ngược được số tiền, người thao tác, thời điểm, lý do và giao dịch gốc.
+
+**Trước V2-M4**, chốt định nghĩa doanh thu, tỷ lệ sử dụng và cách xử lý chênh lệch kiểm kê. **Trước V2-M5**, chốt cửa hàng pilot, dữ liệu được phép dùng, phương án chuyển dữ liệu và hợp đồng API cũ. [Điều kiện phát hành](../ROADMAP.md#roadmap-v20)

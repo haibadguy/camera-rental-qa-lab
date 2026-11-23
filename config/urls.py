@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from catalog import api, operations_api, operations_web, views
+from catalog import api, finance_api, finance_web, operations_api, operations_web, views
 
 urlpatterns = [
     path("", views.equipment_list, name="equipment-list"),
@@ -93,6 +93,21 @@ urlpatterns = [
         views.replace_asset,
         name="replace-asset",
     ),
+    path(
+        "staff/equipment/<int:equipment_id>/deposit/",
+        finance_web.equipment_deposit,
+        name="finance-deposit",
+    ),
+    path(
+        "staff/rentals/<int:rental_id>/finance/",
+        finance_web.ledger,
+        name="finance-ledger",
+    ),
+    path(
+        "staff/rentals/<int:rental_id>/finance/charges/<int:charge_id>/review/",
+        finance_web.review_charge,
+        name="finance-review-charge",
+    ),
     path("api/equipment/", api.equipment_list, name="api-equipment-list"),
     path(
         "api/equipment/<int:equipment_id>/",
@@ -181,5 +196,35 @@ urlpatterns = [
         "api/v2/operations/maintenance/<int:case_id>/resolve/",
         operations_api.resolve_case,
         name="api-maintenance-resolve",
+    ),
+    path(
+        "api/v2/rentals/<int:rental_id>/finance/",
+        finance_api.customer_summary,
+        name="api-finance-summary",
+    ),
+    path(
+        "api/v2/operations/rentals/<int:rental_id>/finance/",
+        finance_api.ledger,
+        name="api-finance-ledger",
+    ),
+    path(
+        "api/v2/operations/rentals/<int:rental_id>/finance/entries/",
+        finance_api.entry,
+        name="api-finance-entry",
+    ),
+    path(
+        "api/v2/operations/rentals/<int:rental_id>/finance/charges/",
+        finance_api.propose_charge,
+        name="api-finance-charge",
+    ),
+    path(
+        "api/v2/operations/rentals/<int:rental_id>/finance/charges/<int:charge_id>/review/",
+        finance_api.review_charge,
+        name="api-finance-review-charge",
+    ),
+    path(
+        "api/v2/operations/equipment/<int:equipment_id>/deposit/",
+        finance_api.equipment_deposit,
+        name="api-finance-deposit",
     ),
 ]

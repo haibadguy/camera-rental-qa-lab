@@ -1,0 +1,18 @@
+{% load pricing %}
+<dl class="details order-details">
+  <div><dt>Tiền thuê</dt><dd>{{ summary.rent_vnd|vnd }}</dd></div>
+  <div><dt>Cọc đã chốt</dt><dd>{{ summary.deposit_required_vnd|vnd }}</dd></div>
+  {% if summary.fees_vnd %}<div><dt>Phí và bồi thường đã duyệt</dt><dd>{{ summary.fees_vnd|vnd }}</dd></div>{% endif %}
+  <div><dt>Đã thu tiền thuê / phí</dt><dd>{{ summary.rent_received_vnd|vnd }}</dd></div>
+  <div><dt>Cọc đang giữ</dt><dd>{{ summary.deposit_held_vnd|vnd }}</dd></div>
+  {% if summary.deposit_applied_vnd %}<div><dt>Đã khấu trừ cọc</dt><dd>{{ summary.deposit_applied_vnd|vnd }}</dd></div>{% endif %}
+  {% if summary.rent_refunded_vnd %}<div><dt>Đã hoàn tiền thuê / phí</dt><dd>{{ summary.rent_refunded_vnd|vnd }}</dd></div>{% endif %}
+  {% if summary.deposit_refunded_vnd %}<div><dt>Đã hoàn cọc</dt><dd>{{ summary.deposit_refunded_vnd|vnd }}</dd></div>{% endif %}
+  {% if not summary.legacy_pending %}
+    <div><dt>Còn phải thu tiền thuê / phí</dt><dd>{{ summary.balance_due_vnd|vnd }}</dd></div>
+    {% if summary.deposit_due_vnd %}<div><dt>Cọc còn thiếu</dt><dd>{{ summary.deposit_due_vnd|vnd }}</dd></div>{% endif %}
+    {% if summary.rent_to_refund_vnd %}<div><dt>Tiền thuê / phí thu dư</dt><dd>{{ summary.rent_to_refund_vnd|vnd }}</dd></div>{% endif %}
+    {% if summary.deposit_to_refund_vnd %}<div><dt>Cọc còn phải hoàn</dt><dd>{{ summary.deposit_to_refund_vnd|vnd }}</dd></div>{% endif %}
+  {% endif %}
+</dl>
+{% if summary.legacy_pending %}<p class="muted">Khoản thu của đơn cũ đang chờ đối soát.</p>{% endif %}

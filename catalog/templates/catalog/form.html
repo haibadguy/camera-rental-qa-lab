@@ -32,6 +32,7 @@
           <p class="code">{{ booking_item.get_kind_display }} / {{ booking_item.code }}</p>
           <h2>{{ booking_item.name }}</h2>
           <p class="price">{{ booking_item.daily_rate_vnd|vnd }}<span class="price-unit">/ngày mỗi thiết bị</span></p>
+          {% if booking_item.deposit_vnd %}<p class="muted">Cọc bảo đảm {{ booking_item.deposit_vnd|vnd }} mỗi thiết bị</p>{% endif %}
         </div>
       </aside>
     </form>

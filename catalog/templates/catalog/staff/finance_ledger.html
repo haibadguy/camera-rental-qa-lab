@@ -1,0 +1,132 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Quyết toán đơn #{{ rental.pk }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn">
+    <a href="{% url 'staff-rentals' %}">Quản lý đơn thuê</a>
+    <span aria-hidden="true">/</span>
+    <a href="{% url 'staff-rental-detail' rental.pk %}">Đơn #{{ rental.pk }}</a>
+  </nav>
+  <div class="page-heading">
+    <div>
+      <h1>Quyết toán đơn #{{ rental.pk }}</h1>
+      <p class="muted">{{ rental.customer.username }} · {{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</p>
+    </div>
+    <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+  </div>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="order-layout">
+    <section class="panel order-panel" aria-labelledby="balance-heading">
+      <h2 id="balance-heading">Số dư của đơn</h2>
+      {% include "catalog/finance_summary.html" %}
+      {% if summary.can_settle %}
+        <p class="notice">Đã đủ điều kiện quyết toán.</p>
+      {% elif rental.status == 'PICKED_UP' or rental.status == 'RETURNED' or rental.status == 'CLOSED' %}
+        <p class="notice">Hoàn tiền và khấu trừ sau khi nhận, kiểm đủ món và xử lý các ngoại lệ của đơn.</p>
+      {% endif %}
+    </section>
+    {% if form_set %}
+      <section class="panel order-panel" aria-labelledby="counter-heading">
+        <h2 id="counter-heading">Giao dịch tại quầy</h2>
+        {% if form_set.cash %}
+          <form class="operation-form" method="post">
+            {% csrf_token %}
+            {{ form_set.cash.as_p }}
+            <button name="action" value="cash">Ghi giao dịch</button>
+          </form>
+        {% endif %}
+        {% if form_set.charge %}
+          <details class="operation-section"{% if active_action == 'charge' %} open{% endif %}>
+            <summary>Đề xuất phí hoặc bồi thường</summary>
+            <form class="operation-form" method="post">
+              {% csrf_token %}
+              {{ form_set.charge.as_p }}
+              <button name="action" value="charge">Gửi đề xuất</button>
+            </form>
+          </details>
+        {% endif %}
+        {% if form_set.adjust %}
+          <details class="operation-section"{% if active_action == 'adjust' %} open{% endif %}>
+            <summary>Miễn hoặc khấu trừ cọc</summary>
+            <form class="operation-form" method="post">
+              {% csrf_token %}
+              {{ form_set.adjust.as_p }}
+              <button name="action" value="adjust">Ghi quyết định</button>
+            </form>
+          </details>
+        {% endif %}
+        {% if form_set.reverse %}
+          <details class="operation-section"{% if active_action == 'reverse' %} open{% endif %}>
+            <summary>Đảo giao dịch ghi nhầm</summary>
+            <form class="operation-form" method="post">
+              {% csrf_token %}
+              {{ form_set.reverse.as_p }}
+              <button name="action" value="reverse">Ghi giao dịch đảo</button>
+            </form>
+          </details>
+        {% endif %}
+        {% if form_set.reconcile %}
+          <details class="operation-section"{% if active_action == 'reconcile' %} open{% endif %}>
+            <summary>Đối soát chứng từ đơn cũ</summary>
+            <form class="operation-form" method="post">
+              {% csrf_token %}
+              {{ form_set.reconcile.as_p }}
+              <button name="action" value="reconcile">Xác nhận đối soát</button>
+            </form>
+          </details>
+        {% endif %}
+      </section>
+    {% endif %}
+  </div>
+  {% if charges %}
+    <section class="operation-section" aria-labelledby="charges-heading">
+      <h2 id="charges-heading">Phí và bồi thường</h2>
+      <ul class="workspace-rows">
+        {% for charge in charges %}
+          <li class="panel order-panel">
+            <h3>#{{ charge.pk }} · {{ charge.get_reason_display }}{% if charge.handover %} · {{ charge.handover.asset.code }}{% endif %}</h3>
+            <p>{{ charge.amount_vnd|vnd }} · {{ charge.get_status_display }}</p>
+            {% if charge.incident_id and perms.catalog.operate_rentals %}
+              <a href="{% url 'maintenance-detail' charge.incident_id %}">Hồ sơ sự cố #{{ charge.incident_id }}</a>
+            {% endif %}
+            <p class="multiline">{{ charge.notes }}</p>
+            <p class="muted">{{ charge.proposed_by.get_username }} · {{ charge.proposed_at|date:"d/m/Y H:i" }}</p>
+            {% if manager and charge.status == 'PENDING' %}
+              <form method="post" class="operation-form" action="{% url 'finance-review-charge' rental.pk charge.pk %}">
+                {% csrf_token %}
+                <label for="review-{{ charge.pk }}">Lý do quyết định</label>
+                <textarea id="review-{{ charge.pk }}" name="notes" required maxlength="2000" rows="2"></textarea>
+                <div class="actions">
+                  <button name="decision" value="approve">Duyệt khoản thu</button>
+                  <button name="decision" value="reject" class="button-outline">Từ chối</button>
+                </div>
+              </form>
+            {% elif charge.reviewed_at %}
+              <p class="multiline">{{ charge.review_note }}</p>
+              <p class="muted">{{ charge.reviewed_by.get_username }} · {{ charge.reviewed_at|date:"d/m/Y H:i" }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+  <section class="operation-section" aria-labelledby="journal-heading">
+    <h2 id="journal-heading">Sổ giao dịch</h2>
+    <ul class="workspace-rows">
+      {% for entry in entries %}
+        <li class="panel workspace-row">
+          <div>
+            <strong>#{{ entry.pk }} · {{ entry.get_kind_display }}</strong>
+            <p class="muted">{{ entry.recorded_by.get_username }} · {{ entry.recorded_at|date:"d/m/Y H:i" }}{% if entry.method %} · {{ entry.get_method_display }}{% endif %}</p>
+            {% if entry.charge_id %}<p>Khoản thu #{{ entry.charge_id }}</p>{% endif %}
+            {% if entry.reverses_id %}<p>Giao dịch gốc #{{ entry.reverses_id }}</p>{% endif %}
+            {% if entry.notes %}<p class="multiline">{{ entry.notes }}</p>{% endif %}
+          </div>
+          {% if entry.amount_vnd %}<strong>{{ entry.amount_vnd|vnd }}</strong>{% endif %}
+        </li>
+      {% empty %}
+        <li class="panel empty-state">Chưa có giao dịch tại quầy.</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

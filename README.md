@@ -2,9 +2,9 @@
 
 Camera Rental là ứng dụng quản lý cho thuê máy ảnh, ống kính và thiết bị quay chụp cho một cửa hàng chuyên nghiệp. Quy mô mục tiêu là **Medium Business Application**, bao phủ từ đặt thuê, giao nhận và bảo trì đến quyết toán tại quầy và báo cáo cho quản lý. [Phạm vi sản phẩm](docs/v2-product-design.md)
 
-V2-M1 đã tích hợp vào `main`. Khách có thể tra lịch và đặt nhiều mẫu trong cùng kỳ. Nhân viên xem lịch giữ theo mã kho, đổi tài sản cùng mẫu và bàn giao, nhận trả nguyên đơn. [Thiết lập local và tài khoản demo](docs/setup.md)
+V2-M2 đã tích hợp vào `main`. Khách có thể đặt nhiều mẫu cùng kỳ, yêu cầu đổi lịch và gia hạn. Nhân viên chuẩn bị, giao nhận theo mã kho, kiểm tra và xử lý sự cố. Quản lý duyệt ngoại lệ và mở lại tồn sau bảo trì. [Thiết lập local và tài khoản demo](docs/setup.md) · [Trạng thái thực thi](docs/implementation-status.md)
 
-Nhánh `feature/v2-m2` bổ sung đổi kỳ có phê duyệt, chuẩn bị và nhận trả theo mã kho, kiểm tra, cách ly và bảo trì. [Trạng thái ứng viên V2-M2](docs/implementation-status.md)
+V2-M3 trên `feature/v2-m3` thêm cọc bảo đảm, sổ giao dịch tại quầy và quyết toán theo đơn. [Thiết lập quyền quyết toán](docs/setup.md#v2-m3--quyền-quyết-toán)
 
 | Bạn cần | Đọc |
 | --- | --- |

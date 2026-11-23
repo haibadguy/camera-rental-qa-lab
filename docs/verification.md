@@ -1,8 +1,31 @@
 # Trạng thái xác minh Camera Rental
 
+## V2-M3 · 24/11/2026
+
+**Pass local.** Runtime `be0a617693e636eaecbc8a9f2b3fc7cd757f1b4c` được dựng từ `git archive` trên Compose project `camera-v2-m3-review-cda42501`, cổng 18052, volume mới. SHA-256 của 28 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Compose, Django và migrations | **Pass**, Verify exit 0. Build, seed, DB/web healthy. Áp dụng `catalog.0001`–`0007`. System check sạch, migration drift báo `No changes detected`. |
+| Suite PostgreSQL | **Pass**, 62/62 trong 17,246 giây. Kiểm chốt cọc, thu từng phần, chặn giao khi thiếu tiền, gia hạn, nhận trả từng món, xử lý hỏng/mất, hủy và `NO_SHOW`, khấu trừ, hoàn, đảo giao dịch và phân quyền. Nâng từ `0006` giữ đơn và giá đã chốt, để sổ thu cũ chờ đối soát. |
+| Tranh chấp PostgreSQL | **Pass**, 6/6 chạy riêng trong 2,019 giây. Cùng mã ghi thu đồng thời tạo một bút toán. Hai yêu cầu hoàn khác mã cạnh tranh cùng số dư nhận `201` và `409`. Các ca đồng thời về tồn và lịch tiếp tục đạt. |
+| HTTP smoke | **Pass**. API từ chối giao khi thiếu tiền, từ chối khách ghi sổ, trả cùng ID khi gửi lại và đối chiếu khoản hoàn sau hủy. Duy trì luồng đặt nhiều SKU, đổi kỳ, giao nhận, kiểm tra và lịch kho. |
+| Chrome headless | **Pass** tại 1440 × 1000, 390 × 844 và 320 × 780. Dùng các SKU `FINUI-1440`, `FINUI-390`, `FINUI-320` trên DB kiểm thử, đơn #5–#7 kỳ 24–25/11. Quản lý cấu hình cọc 70.000 ₫. Nhân viên thu 120.000 ₫ tiền thuê và 70.000 ₫ tiền cọc, bàn giao và nhận trả. Quản lý duyệt phí 45.000 ₫, đóng sự cố và khấu trừ. Nhân viên hoàn 25.000 ₫. Khách thấy số tiền hoàn trên đơn. Đã xem ảnh, kiểm thứ tự Tab cho form thu và xác nhận luồng không tràn ngang, lỗi JS hoặc HTTP 5xx. |
+| GitHub Actions | **Not Run** cho V2-M3. Ứng viên local chờ duyệt push. |
+
+Chạy từ archive của SHA trên. Override IPAM tạm nằm ngoài repo dùng subnet `10.250.52.0/24`. Các volume cũ được giữ.
+
+```powershell
+$env:COMPOSE_FILE = "compose.yaml;$env:TEMP\camera-v2-m3-network-52.yaml"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-v2-m3-review -Port 18052
+docker exec camera-v2-m3-review-cda42501-web-1 python manage.py test catalog.tests.ConcurrentBookingTests catalog.test_schedule_changes.RentalChangeConcurrencyTests catalog.test_maintenance.ConcurrentMaintenanceTests catalog.test_finance.FinanceConcurrencyTests --verbosity 2
+```
+
+Script Chrome và fixture nằm trong thư mục tạm `camera-v2-m3-browser-review`, chạy với `CAMERA_M3_URL=http://127.0.0.1:18052` và `CAMERA_M3_PLAYWRIGHT` trỏ đến Playwright Core. Ca kiểm thử hồi quy bàn giao ban đầu thiếu bước thu tiền cho đơn mới. Fixture đã được cập nhật để đi qua sổ chung và các khẳng định về tồn kho được giữ.
+
 ## V2-M2 · 24/11/2026
 
-**Pass local, sẵn sàng cho review PR.** Bản runtime `376ddf9bc1a771aae46419f75e684089afe7cd91` được dựng từ `git archive`. SHA-256 của 36 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19. Project `camera-v2-m2-review-08b87860` chạy cổng 18049 trên volume mới.
+**Pass local.** Bản runtime `376ddf9bc1a771aae46419f75e684089afe7cd91` được dựng từ `git archive`. SHA-256 của 36 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19. Project `camera-v2-m2-review-08b87860` chạy cổng 18049 trên volume mới.
 
 | Kiểm tra | Kết quả |
 | --- | --- |
@@ -11,7 +34,6 @@
 | Tranh chấp PostgreSQL | **Pass**, chạy riêng 5/5 trong 1,016 giây. Đặt một SKU, đặt nhiều SKU theo thứ tự ngược, bàn giao đồng thời, đặt cạnh đổi kỳ và đặt cạnh bảo trì. |
 | HTTP smoke | **Pass**. Đăng ký, đăng nhập, tra tồn, đặt, chuẩn bị và giao theo mã kho, nhận trả sớm, kiểm tra và hủy. API v1 trả `409` khi cố trả nguyên đơn đã giao theo mã kho. Đơn nhiều SKU qua Web được báo giá lại, phê duyệt qua API v2, hiện trên lịch kho và hủy cả đơn. |
 | Chrome headless | **Pass** ở 1440 × 1000, 390 × 844 và 320 × 780. Dùng hai mã kho cho mỗi SKU kiểm thử `V2UI-1440`, `V2UI-390`, `V2UI-320`. Khách đặt và yêu cầu đổi lịch, nhân viên duyệt rồi chuẩn bị, giao và nhận từng món, kiểm hư hỏng, ghi sửa, lên lịch bảo trì. Quản lý mở lại tồn. Khách thấy 1/2 rồi 2/2 món đã nhận. Ba đơn #5–#7 có kỳ sau đổi là 24–26/11/2026. Đã xem ảnh màn báo giá, hàng đợi, giao nhận và quyết định quản lý. Không tràn ngang, lỗi JS hoặc HTTP 5xx trong luồng đã chạy. |
-| GitHub Actions | **Not Run**. Nhánh local chờ duyệt push. |
 
 Chạy từ archive của SHA trên. Override IPAM tạm ở ngoài repo dùng subnet `10.250.49.0/24` sau khi đối chiếu các mạng Compose có sẵn.
 
@@ -24,6 +46,11 @@ docker exec camera-v2-m2-review-08b87860-web-1 python manage.py test catalog.tes
 Để lặp lượt trình duyệt trên máy đã kiểm chứng, dùng fixture `browser_fixture.py` và script `v2-m2-review.cjs` trong thư mục tạm `camera-v2-m2-browser-review`. Fixture thêm một tài khoản kiểm thử và ba SKU biệt lập. Quyền manager cấp qua `set_rental_role`. Script chạy với `CAMERA_M2_URL=http://127.0.0.1:18049` và `CAMERA_M2_PLAYWRIGHT` trỏ đến Playwright Core cài local.
 
 Lượt đầu đạt 50 test nhưng smoke còn theo quy trình bàn giao cũ. Một lượt dựng sau đó gặp lỗi Docker dừng với exit 137. Bản archive `a21c575` phát hiện thiếu auth context processor, làm ẩn liên kết vận hành và bảo trì trên Web. Đã sửa và chạy lại toàn bộ trên project mới. Các volume cũ được giữ.
+
+### CI V2-M2 trên GitHub
+
+- **Nhánh tính năng · Pass.** Run push trên `feature/v2-m2` đạt ở SHA `7657a3e092902f7dfde85ac406a3003a292f2f2a`. [GitHub Actions](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45259641984)
+- **Sau merge · Pass.** PR #6 vào `main` ngày 24/11/2026 tại `277f5c0b3fc354fb6da8c741725b3cae9b6e724e`. Run push trên cùng SHA đạt build, migrations, Django check, migration drift, suite PostgreSQL và HTTP smoke. [PR #6](https://github.com/haibadguy/camera-rental-qa-lab/pull/6) · [GitHub Actions trên main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45260369314)
 
 ## V2-M1 · 23/11/2026
 

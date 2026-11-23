@@ -51,7 +51,7 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 .\scripts\dev.ps1 -Action Verify -Port 8010
 ```
 
-`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Suite kiểm tranh chấp khi đặt đơn, bàn giao, đổi kỳ và bảo trì. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002`, `catalog.0004` và `catalog.0005`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
+`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Suite kiểm tranh chấp đặt đơn, bàn giao, đổi kỳ, bảo trì và ghi sổ tiền. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002`, `catalog.0004`, `catalog.0005` và `catalog.0006`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
 
 Để xác minh ứng viên, dùng checkout sạch của SHA đã chọn và chạy từ thư mục gốc của checkout đó. Ghi SHA vào kết quả. Có thể thêm `-Project camera-base-rc` để phân biệt nhóm kiểm tra, script vẫn tự thêm hậu tố riêng vào tên project.
 
@@ -96,3 +96,16 @@ docker compose exec web python manage.py set_rental_role <staff-username> manage
 ```
 
 Quản lý có quyền vận hành và thêm quyền kết thúc hồ sơ bảo trì, mở lại tồn hoặc xác nhận mất. Quyền thao tác cũ trên đơn Base vẫn dùng `is_staff`. [Hợp đồng Web/API](architecture.md#v2-m2--vận-hành-thuê)
+
+## V2-M3 · Quyền quyết toán
+
+`migrate` tạo nhóm `Rental Finance Clerks` và `Rental Finance Managers`. Cấp quyền tài chính cho tài khoản nhân viên theo phân công. Có thể gán cả vai trò vận hành và vai trò quyết toán cho cùng tài khoản.
+
+```powershell
+docker compose exec web python manage.py set_rental_role demo-staff finance-clerk
+docker compose exec web python manage.py set_rental_role '<ten-quan-ly>' finance-manager
+```
+
+Tài khoản `demo-staff` mới đã có quyền ghi thu và hoàn. Với tài khoản demo đã tồn tại từ trước, dùng lệnh cấp quyền ở trên. Quản lý chỉnh cọc ở **Kho thiết bị** và duyệt phí, miễn hoặc khấu trừ tại **Quyết toán tại quầy** trên đơn. Nhân viên ghi tiền mặt hoặc chuyển khoản khi thực thu hoặc thực hoàn. Khoản thu cũ cần chứng từ và quản lý xác nhận trước khi đối soát.
+
+Migration `0007` chặn hạ cấp khi có sổ tiền, đơn mới theo V2-M3 hoặc cấu hình cọc. Diễn tập phương án khôi phục trên bản sao trước khi nâng dữ liệu thật. [Hợp đồng Web/API](architecture.md#v2-m3--quyết-toán-tại-quầy)

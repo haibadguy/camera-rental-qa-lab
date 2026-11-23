@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 
 from . import services
 from .models import AssetReservation, Equipment, Rental, RentalLine
+from .test_finance import fund_rental
 
 
 class CatalogTests(TestCase):
@@ -220,7 +221,11 @@ class RegistrationTests(TestCase):
             ("V7!kQ3@", ["password_too_short"]),
             (
                 "123",
-                ["password_too_short", "password_too_common", "password_entirely_numeric"],
+                [
+                    "password_too_short",
+                    "password_too_common",
+                    "password_entirely_numeric",
+                ],
             ),
         ):
             with self.subTest(password=password):
@@ -269,7 +274,8 @@ class RentalFlowTests(TestCase):
         self.assertContains(available, "Còn 2 thiết bị theo lịch đã chọn.")
         self.assertContains(available, "Thuê từ 1 đến 30 ngày.")
         self.assertContains(
-            available, f'{booking}?pickup_date={self.pickup}&amp;return_date={self.dropoff}'
+            available,
+            f"{booking}?pickup_date={self.pickup}&amp;return_date={self.dropoff}",
         )
         self.client.force_login(self.customer)
         booking_page = self.client.get(booking, period | {"quantity": 2})
@@ -280,7 +286,9 @@ class RentalFlowTests(TestCase):
         self.assertEqual(form["quantity"].value(), 1)
         self.assertFalse(Rental.objects.exists())
 
-        services.book_rental(self.other, self.equipment.pk, self.pickup, self.dropoff, 2)
+        services.book_rental(
+            self.other, self.equipment.pk, self.pickup, self.dropoff, 2
+        )
         sold_out = self.client.get(detail, period)
         self.assertContains(sold_out, "Không còn thiết bị theo lịch này.")
         self.assertNotContains(sold_out, booking)
@@ -298,11 +306,13 @@ class RentalFlowTests(TestCase):
         available = self.client.get(catalog, filters | period)
         self.assertContains(
             available,
-            f'{booking}?pickup_date={self.pickup}&amp;return_date={self.dropoff}',
+            f"{booking}?pickup_date={self.pickup}&amp;return_date={self.dropoff}",
         )
         self.assertContains(available, "Còn theo lịch: 2")
 
-        services.book_rental(self.other, self.equipment.pk, self.pickup, self.dropoff, 2)
+        services.book_rental(
+            self.other, self.equipment.pk, self.pickup, self.dropoff, 2
+        )
         sold_out = self.client.get(catalog, filters | period)
         self.assertContains(sold_out, "Còn theo lịch: 0")
         self.assertNotContains(sold_out, booking)
@@ -501,6 +511,7 @@ class RentalFlowTests(TestCase):
         order = services.book_rental(
             self.customer, self.equipment.pk, self.today, self.dropoff, 1
         )
+        fund_rental(order, self.staff)
         services.update_equipment(
             self.staff, self.equipment.pk, "Camera", 300_000, 2, is_active=False
         )
@@ -600,6 +611,7 @@ class RentalFlowTests(TestCase):
         rental = services.book_rental(
             self.customer, self.equipment.pk, self.today, self.dropoff, 2
         )
+        fund_rental(rental, self.staff)
         pickup_url = reverse("pick-up-rental", args=[rental.pk])
         return_url = reverse("api-return", args=[rental.pk])
         self.client.force_login(self.customer)
@@ -639,6 +651,7 @@ class RentalFlowTests(TestCase):
         next_rental = services.book_rental(
             self.other, self.equipment.pk, self.today, self.dropoff, 2
         )
+        fund_rental(next_rental, self.staff)
         pickup_url = reverse("api-pick-up", args=[next_rental.pk])
         api = APIClient()
         api.force_authenticate(self.customer)
@@ -846,6 +859,8 @@ class ConcurrentBookingTests(TransactionTestCase):
             )
             for _ in range(2)
         ]
+        for rental in rentals:
+            fund_rental(rental, staff)
         requests = [
             (staff, reverse("api-pick-up", args=[rental.pk]), {}) for rental in rentals
         ]
@@ -901,7 +916,9 @@ class LegacyRentalMigrationTests(TransactionTestCase):
                 "status",
                 "returned_at",
             )
-            history = list(rentals_before.order_by("pk").values_list(*historical_fields))
+            history = list(
+                rentals_before.order_by("pk").values_list(*historical_fields)
+            )
 
             executor = MigrationExecutor(connection)
             executor.migrate(upgraded_schema)
