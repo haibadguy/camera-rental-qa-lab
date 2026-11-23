@@ -1,32 +1,43 @@
 """Shared rental and inventory operations for the web and API."""
 
-from .equipment import catalog_items, create_equipment, update_equipment
+from .equipment import (
+    catalog_items,
+    create_equipment,
+    enable_asset_tracking,
+    register_asset,
+    update_equipment,
+)
 from .errors import RentalError
 from .inventory import (
     MAX_RENTAL_DAYS,
+    asset_calendar,
     available_stock,
     catalog_availability,
     checked_out_quantity,
     equipment_with_physical_stock,
+    rental_asset_history,
+    unassigned_legacy_rentals,
     validate_period,
 )
 from .rentals import (
     MAX_RENTAL_QUANTITY,
     MIN_RENTAL_QUANTITY,
     StaffRentalQueue,
+    book_order,
     book_rental,
     can_cancel,
     can_mark_no_show,
     can_pick_up,
+    can_replace_asset,
     can_return,
     cancel_rental,
     customer_rentals,
     mark_no_show,
     pick_up_rental,
+    replace_reserved_asset,
     return_rental,
     staff_rentals,
 )
-
 
 __all__ = [
     "MAX_RENTAL_DAYS",
@@ -34,11 +45,14 @@ __all__ = [
     "MIN_RENTAL_QUANTITY",
     "RentalError",
     "StaffRentalQueue",
+    "asset_calendar",
     "available_stock",
+    "book_order",
     "book_rental",
     "can_cancel",
     "can_mark_no_show",
     "can_pick_up",
+    "can_replace_asset",
     "can_return",
     "cancel_rental",
     "catalog_availability",
@@ -46,11 +60,16 @@ __all__ = [
     "checked_out_quantity",
     "create_equipment",
     "customer_rentals",
+    "enable_asset_tracking",
     "equipment_with_physical_stock",
     "mark_no_show",
     "pick_up_rental",
+    "register_asset",
+    "rental_asset_history",
+    "replace_reserved_asset",
     "return_rental",
     "staff_rentals",
+    "unassigned_legacy_rentals",
     "update_equipment",
     "validate_period",
 ]

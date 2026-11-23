@@ -23,7 +23,10 @@
           <div><dt>Có thực tế trong kho</dt><dd>{{ item.available_now }}</dd></div>
           <div><dt>Giá thuê</dt><dd>{{ item.daily_rate_vnd|vnd }}<span class="price-unit">/ngày</span></dd></div>
         </dl>
-        <a class="button button-outline button-small" href="{% url 'edit-equipment' item.pk %}">Sửa thiết bị <span aria-hidden="true">↗</span></a>
+        <div class="actions">
+          <a class="button button-outline button-small" href="{% url 'staff-assets' item.pk %}">Mã kho và lịch giữ</a>
+          <a class="button button-outline button-small" href="{% url 'edit-equipment' item.pk %}">Sửa thiết bị <span aria-hidden="true">↗</span></a>
+        </div>
       </li>
     {% empty %}
       <li class="panel empty-state">Chưa có thiết bị.</li>

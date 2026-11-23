@@ -52,3 +52,18 @@ equipment, inventory, rentals → models, errors
 Danh mục nhận `search` theo tên/mã và `kind` là `CAMERA` hoặc `LENS`. Tra cứu tồn nhận cặp `pickup_date` và `return_date` dạng `YYYY-MM-DD` và trả thêm `available_stock`. Đặt thuê nhận JSON gồm `equipment_id`, `pickup_date`, `return_date` và `quantity`. Phản hồi đơn chứa `id`, số lượng, giá ngày lúc đặt, `total_vnd` dưới dạng chuỗi số nguyên, `status`, `picked_up_at`, `returned_at`, `cancellation_reason`, `is_overdue` và `was_returned_late`. Thời điểm chưa ghi nhận dùng `null`, lý do hủy mặc định dùng chuỗi rỗng.
 
 API trả `400` cho dữ liệu sai, `401` khi thiếu hoặc sai thông tin xác thực, `403` khi khách gọi thao tác dành cho nhân viên, `404` khi đối tượng không tồn tại hoặc đơn thuộc khách khác, và `409` khi thiếu tồn hoặc sai trạng thái/thời điểm. Khách xem và hủy đơn của mình. Bàn giao, `NO_SHOW` và ghi nhận trả yêu cầu tài khoản nhân viên.
+
+## V2-M1 · Đặt nhiều thiết bị
+
+`Equipment` giữ mã mẫu và giá niêm yết. `AssetUnit` giữ mã kho duy nhất và serial hãng tùy chọn. `RentalLine` lưu số lượng và giá VND tại lúc đặt cho một mẫu trong đơn. `AssetReservation` giữ một thiết bị cho một dòng theo khoảng `[ngày nhận, ngày trả)`. Ràng buộc loại trừ PostgreSQL với `btree_gist` chặn hai lượt giữ có lịch chồng lấn cho cùng mã kho. Web và DRF gọi chung `catalog.services`.
+
+Đặt thuê khóa các mẫu theo ID tăng dần, kiểm khả dụng suốt kỳ và ghi đơn, dòng và lượt giữ trong cùng một giao dịch. Hủy đơn và xử lý không đến nhận giải phóng lượt giữ. Khi đổi máy, lượt mới liên kết với lượt đã giải phóng và ghi người đổi. Bàn giao nguyên đơn kiểm thêm tài sản đang ở ngoài kho. Trả sớm giữ lịch đến mốc trả cam kết như ở Base.
+
+| Thao tác | Hợp đồng |
+| --- | --- |
+| `POST /api/v2/rentals/` | Nhận `pickup_date`, `return_date` và `lines` gồm cặp `equipment_id`, `quantity`. Các mẫu phải đã bật giữ theo mã kho. Mỗi mẫu xuất hiện một lần. Trả `201` cùng các dòng đã chốt giá, hoặc `409` khi thiếu tồn. |
+| `GET /api/v2/rentals/` và `GET /api/v2/rentals/{id}/` | Trả đơn của khách, gồm lịch sử đơn một dòng đã nâng dữ liệu. Mã tài sản nội bộ chỉ xuất hiện trên màn nhân viên. |
+| `POST /api/v2/rentals/{id}/cancel/` | Hủy đơn của khách trước ngày nhận và giải phóng lịch cả đơn. |
+| `/api/rentals/` và các route v1 | Giữ định dạng đơn một dòng. POST v1 có `lines` trả `400`. Các route xem và thao tác v1 trả `404` cho đơn nhiều dòng. POST một dòng dùng cùng nghiệp vụ và giữ tài sản cụ thể nếu mẫu đã chuyển đổi. |
+
+Các đơn v1 đang mở vẫn xử lý qua hợp đồng cũ. Giữ theo mã kho chỉ bật theo từng mẫu sau khi đối soát. [Quy trình nâng dữ liệu](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho)

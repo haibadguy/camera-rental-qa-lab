@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from catalog.models import Equipment
-
+from catalog.models import AssetUnit, Equipment
 
 DEMO_EQUIPMENT = (
     (
@@ -46,7 +45,7 @@ class Command(BaseCommand):
             kind,
             specifications,
         ) in DEMO_EQUIPMENT:
-            _, was_created = Equipment.objects.get_or_create(
+            equipment, was_created = Equipment.objects.get_or_create(
                 code=code,
                 defaults={
                     "name": name,
@@ -54,8 +53,16 @@ class Command(BaseCommand):
                     "total_stock": total_stock,
                     "kind": kind,
                     "specifications": specifications,
+                    "tracks_assets": True,
                 },
             )
+            if was_created:
+                AssetUnit.objects.bulk_create(
+                    [
+                        AssetUnit(equipment=equipment, code=f"{code}-U{number:02d}")
+                        for number in range(1, total_stock + 1)
+                    ]
+                )
             created += was_created
 
         self.stdout.write(f"Created {created} demo equipment entries.")

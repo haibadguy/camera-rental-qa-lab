@@ -17,10 +17,16 @@ urlpatterns = [
     ),
     path("equipment/<int:equipment_id>/book/", views.book, name="book"),
     path("rentals/", views.my_rentals, name="my-rentals"),
+    path("rentals/new/", views.book_order, name="book-order"),
     path("rentals/<int:rental_id>/", views.rental_detail, name="rental-detail"),
     path("rentals/<int:rental_id>/cancel/", views.cancel, name="cancel-rental"),
     path("staff/equipment/new/", views.manage_equipment, name="new-equipment"),
     path("staff/equipment/", views.staff_equipment, name="staff-equipment"),
+    path(
+        "staff/equipment/<int:equipment_id>/assets/",
+        views.staff_assets,
+        name="staff-assets",
+    ),
     path(
         "staff/equipment/<int:equipment_id>/",
         views.manage_equipment,
@@ -47,6 +53,11 @@ urlpatterns = [
         views.record_return,
         name="return-rental",
     ),
+    path(
+        "staff/rentals/<int:rental_id>/assets/<int:reservation_id>/replace/",
+        views.replace_asset,
+        name="replace-asset",
+    ),
     path("api/equipment/", api.equipment_list, name="api-equipment-list"),
     path(
         "api/equipment/<int:equipment_id>/",
@@ -59,4 +70,11 @@ urlpatterns = [
     path("api/rentals/<int:rental_id>/pick-up/", api.pick_up, name="api-pick-up"),
     path("api/rentals/<int:rental_id>/no-show/", api.no_show, name="api-no-show"),
     path("api/rentals/<int:rental_id>/return/", api.record_return, name="api-return"),
+    path("api/v2/rentals/", api.orders, name="api-orders"),
+    path("api/v2/rentals/<int:rental_id>/", api.order_detail, name="api-order-detail"),
+    path(
+        "api/v2/rentals/<int:rental_id>/cancel/",
+        api.cancel_order,
+        name="api-cancel-order",
+    ),
 ]

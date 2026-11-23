@@ -7,8 +7,8 @@
 | Công việc | Trạng thái | Kết quả cần đạt |
 | --- | --- | --- |
 | Product Discovery & Architecture Planning | Đã lập đề xuất | Phạm vi, hành trình, mô hình dữ liệu, chuyển đổi API và tiêu chí phát hành trong đề án v2.0. |
-| Duyệt phạm vi mốc đầu | Chờ Hải | Chốt mô hình giữ thiết bị và tiêu chí bảo toàn dữ liệu Base. |
-| V2-M1 · Đặt nhiều thiết bị | Chưa bắt đầu | Dùng `main` đã xác minh. Thêm tài sản và dòng đơn. Đặt và hủy cả đơn nguyên tử trên PostgreSQL. [Phạm vi mốc đầu](docs/v2-product-design.md#mốc-đầu-tiên-và-tiêu-chí-phát-hành) |
+| Duyệt phạm vi mốc đầu | Đã duyệt | Pilot một điểm, giữ tài sản nguyên kỳ, đổi cùng mẫu có lịch sử và bảo toàn dữ liệu Base. |
+| V2-M1 · Đặt nhiều thiết bị | Đã kiểm chứng local · Sẵn sàng mở PR | Đặt và hủy cả đơn nguyên tử trên PostgreSQL. [Nghiệp vụ V2-M1](docs/architecture.md#v2-m1--đặt-nhiều-thiết-bị) · [Bằng chứng xác minh](docs/verification.md#v2-m1--23112026) |
 
 ## Base v1.0 · Technical Foundation
 

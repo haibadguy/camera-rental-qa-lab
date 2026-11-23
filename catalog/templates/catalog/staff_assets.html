@@ -1,0 +1,63 @@
+{% extends "catalog/base.html" %}
+{% block title %}Lịch kho {{ equipment.code }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'staff-equipment' %}">Kho thiết bị</a></nav>
+  <div class="page-heading"><h1>Lịch kho {{ equipment.code }}</h1></div>
+  <div class="order-layout">
+    <section class="panel order-panel">
+      <h2>{{ equipment.name }}</h2>
+      <p>{{ assets|length }} thiết bị đã đăng ký{% if not equipment.tracks_assets %} / {{ equipment.total_stock }} theo tồn v1{% endif %}</p>
+      <ul>
+        {% for asset in assets %}
+          <li><strong>{{ asset.code }}</strong>{% if asset.serial %} · {{ asset.serial }}{% endif %}</li>
+        {% empty %}
+          <li>Chưa đăng ký mã kho.</li>
+        {% endfor %}
+      </ul>
+      {% if not equipment.tracks_assets %}
+        <h3>Chuyển sang giữ theo mã kho</h3>
+        {% if activation_error %}<p class="notice notice-error" role="alert">{{ activation_error }}</p>{% endif %}
+        <p>Đăng ký đủ thiết bị và xử lý các đơn v1 còn cam kết trước khi bật.</p>
+        {% if unassigned %}
+          <ul aria-label="Đơn v1 cần đối soát">
+            {% for rental in unassigned %}
+              <li><a href="{% url 'staff-rental-detail' rental.pk %}">Đơn #{{ rental.pk }}</a> · {{ rental.get_status_display }} · {{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <button name="action" value="enable" class="button-outline">Bật giữ theo mã kho</button>
+        </form>
+      {% endif %}
+    </section>
+    <form method="post" class="panel order-summary asset-form">
+      <h2>Đăng ký thiết bị vật lý</h2>
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Lưu mã kho</button>
+    </form>
+  </div>
+  <section class="asset-calendar" aria-labelledby="calendar-heading">
+    <h2 id="calendar-heading">Lịch giữ thiết bị</h2>
+    <ul class="workspace-rows">
+      {% for hold in calendar %}
+        <li class="panel workspace-row asset-calendar-row">
+          <strong>{{ hold.asset.code }}</strong>
+          <a href="{% url 'staff-rental-detail' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a>
+          <span>{{ hold.period.lower|date:"d/m/Y" }} – {{ hold.period.upper|date:"d/m/Y" }}</span>
+          <span>{% if hold.released_at %}Đã giải phóng{% else %}{{ hold.line.rental.get_status_display }}{% endif %}</span>
+        </li>
+      {% empty %}
+        <li class="panel empty-state">Chưa có lịch giữ cho mẫu này.</li>
+      {% endfor %}
+    </ul>
+    {% if calendar.has_other_pages %}
+      <nav class="actions" aria-label="Trang lịch giữ">
+        {% if calendar.has_previous %}<a href="?page={{ calendar.previous_page_number }}">Trang trước</a>{% endif %}
+        <span>Trang {{ calendar.number }} / {{ calendar.paginator.num_pages }}</span>
+        {% if calendar.has_next %}<a href="?page={{ calendar.next_page_number }}">Trang sau</a>{% endif %}
+      </nav>
+    {% endif %}
+  </section>
+{% endblock %}

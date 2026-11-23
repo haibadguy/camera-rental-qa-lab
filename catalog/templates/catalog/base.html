@@ -16,6 +16,7 @@
       <a class="brand" href="{% url 'equipment-list' %}"><span class="brand-mark" aria-hidden="true"></span>Camera Rental</a>
       <div class="nav-links">
         <a href="{% url 'equipment-list' %}"{% if request.resolver_match.url_name == 'equipment-list' %} aria-current="page"{% endif %}>Danh mục</a>
+        {% if not request.user.is_staff %}<a href="{% url 'book-order' %}"{% if request.resolver_match.url_name == 'book-order' %} aria-current="page"{% endif %}>Đặt nhiều thiết bị</a>{% endif %}
         {% if request.user.is_authenticated %}
           {% if request.user.is_staff %}
             <a href="{% url 'staff-equipment' %}"{% if request.resolver_match.url_name == 'staff-equipment' %} aria-current="page"{% endif %}>Kho thiết bị</a>
