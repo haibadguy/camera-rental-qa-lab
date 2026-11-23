@@ -1,4 +1,31 @@
-# Trạng thái xác minh Camera Rental Base v1.0
+# Trạng thái xác minh Camera Rental
+
+## V2-M1 · 23/11/2026
+
+**Đã kiểm chứng local, sẵn sàng mở PR.** Commit ứng viên `8556e035130c3e517f0ffce65ea294dbf3e53c75` trên `feature/v2-m1`. Đối chiếu SHA-256 của 22 tệp runtime và test thay đổi với container đang phục vụ, tất cả khớp.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Docker Compose và PostgreSQL | **Pass**, exit 0. Project `camera-v2-m1-final-72e16ef6`, cổng 18044, volume mới cùng project. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11, Django 5.2.19. Build, migration và seed đạt. Web và DB healthy. |
+| Django và kiểm thử | **Pass**. System check sạch, migration drift không phát hiện thay đổi. Suite PostgreSQL 40/40 trong 6,081 giây. |
+| Nâng dữ liệu | **Pass**. Fixture `0004` có đơn đã hủy, đã xác nhận, đã bàn giao và đã trả sớm. `0005` giữ dữ liệu đơn và snapshot giá, backfill một dòng mỗi đơn, giữ timestamp trống khi lịch sử chưa có. Đơn đang hoạt động chưa có mã kho xuất hiện trong danh sách đối soát. |
+| Giao dịch và tranh chấp | **Pass**. Hai request độc lập đặt cùng hai SKU theo thứ tự ngược nhau nhận `201` và `409`. PostgreSQL giữ đúng một đơn, hai dòng, hai lượt giữ. Kiểm thử xác nhận từ chối chồng lấn khi ghi thẳng vào DB, giữ đúng khoảng biên và không để lại đơn khi một dòng thiếu. |
+| HTTP smoke | **Pass** cho Base và V2-M1. Đã chạy đăng ký, đăng nhập, phân quyền, tra lịch, đặt, bàn giao, trả sớm và hủy trên Base. Smoke V2 đặt nhiều SKU qua web, xem lịch giữ của nhân viên, xác nhận API v1 trả `404` cho đơn nhiều dòng và hủy cả đơn qua API v2. |
+| Chrome headless | **Pass** ở 1440 × 1000, 390 × 844 và 320 × 780. Dùng tài khoản demo, Sony A6400 và Sigma 30mm, mỗi món một chiếc trong hai ngày. Kiểm tra tổng 900.000 ₫, mã kho chỉ hiện cho nhân viên, đổi từ `CAM-001-U01` sang `CAM-001-U02`, thấy lịch sử trên lịch kho, rồi hủy qua web. Đơn #5–#7 dùng các kỳ 27–29/11, 01–03/12 và 05–07/12/2026. Không tràn ngang, lỗi JavaScript hoặc HTTP 5xx trong luồng đã chạy. |
+| CI GitHub | **Not Run**. Ứng viên đang ở nhánh local. |
+
+Lệnh Verify từ checkout sạch của ứng viên. Override tạm nằm ngoài repo, dùng subnet `10.250.44.0/24` đã kiểm tra vì Docker trên máy này đã hết dải mạng mặc định.
+
+```powershell
+$env:COMPOSE_FILE = "compose.yaml;$env:TEMP\camera-v2-m1-network-44.yaml"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-v2-m1-final -Port 18044
+$env:CAMERA_V2_M1_URL = 'http://127.0.0.1:18044'
+node "$env:TEMP\camera-rental-browser-5fe17aed\v2-m1-review.cjs"
+```
+
+Các volume hiện có được giữ. Chuyển một SKU v1 đang có đơn chưa đối soát bị chặn theo [quy trình nâng dữ liệu](setup.md#chuyển-mẫu-v1-sang-giữ-theo-mã-kho).
+
+## Base v1.0
 
 **Base local/demo đã đóng băng · G0–G4 đạt**
 
