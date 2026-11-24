@@ -55,6 +55,8 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 
 Để xác minh ứng viên, dùng checkout sạch của SHA đã chọn và chạy từ thư mục gốc của checkout đó. Ghi SHA vào kết quả. Có thể thêm `-Project camera-base-rc` để phân biệt nhóm kiểm tra, script vẫn tự thêm hậu tố riêng vào tên project.
 
+Nếu Docker báo hết dải subnet mặc định, đối chiếu `docker network inspect` và tuyến mạng của máy. Chọn subnet trống rồi tạo file Compose override ngoài repo với `networks.default.ipam.config` và `subnet` tương ứng. Đặt `COMPOSE_FILE` là `compose.yaml;<đường-dẫn-override>` trong phiên PowerShell chạy Verify. Giữ cấu hình đó khi gọi lại project.
+
 Khi duyệt Base local/demo, mở cổng của project biệt lập. Từ danh mục, tìm `LEN-001`, chọn kỳ tương lai, thử đăng ký, đặt đơn và hủy từ **Đơn của tôi**. Đăng nhập bằng tài khoản staff để xem **Kho thiết bị**, **Quản lý đơn thuê** và đơn demo ở nhóm **Trả hôm nay**. Dùng địa chỉ, giờ và kênh hỗ trợ mẫu nếu cần xem trạng thái cấu hình có nội dung.
 
 `Reset` tạo một project mới có dữ liệu demo sạch và giữ nguyên dữ liệu của project cũ. Chọn cổng khác nếu bản đang chạy vẫn dùng cổng mặc định.
@@ -117,6 +119,14 @@ Nhóm `Rental Stock Counters` mở phiên và ghi đối chiếu. Nhóm `Rental 
 ```powershell
 docker compose exec web python manage.py set_rental_role demo-staff stock-counter
 docker compose exec web python manage.py set_rental_role '<ten-quan-ly>' reporting-manager
+```
+
+Lệnh cấp quyền yêu cầu tài khoản nhân viên đang hoạt động. Trong project demo biệt lập, dùng file môi trường và tên project đã in ở Verify. Có thể dùng `demo-staff` để thử quyền báo cáo trên dữ liệu demo.
+
+```powershell
+$verifyEnvFile = '<duong-dan-env-tu-Verify>'
+$verifyProject = '<ten-project-tu-Verify>'
+docker compose --env-file $verifyEnvFile -p $verifyProject exec -T web python manage.py set_rental_role demo-staff reporting-manager
 ```
 
 Mở phiên từ **Kiểm kê** hoặc màn **Mã kho và lịch giữ** của mẫu đã chuyển đổi. Ghi kết quả từng mã, chọn lượt giao nhận khi có phát sinh, rồi quản lý chốt các dòng khác kỳ vọng. Quản lý vào **Báo cáo**, chọn kỳ và mở liên kết đơn hoặc giao dịch để đối chiếu.

@@ -6,6 +6,8 @@ V2-M2 đã tích hợp vào `main`. Khách có thể đặt nhiều mẫu cùng 
 
 V2-M3 đã tích hợp vào `main`, bổ sung cọc bảo đảm, sổ giao dịch tại quầy và quyết toán theo đơn. [Thiết lập quyền quyết toán](docs/setup.md#v2-m3--quyền-quyết-toán)
 
+Ứng viên `integration/v2-m4-m5` bổ sung báo cáo quản lý, lọc thương hiệu và kiểm kê, cùng kiểm chứng kỹ thuật trên dữ liệu demo. [Trạng thái ứng viên](docs/implementation-status.md)
+
 | Bạn cần | Đọc |
 | --- | --- |
 | Biết mốc đang làm | [Kế hoạch phát triển](PROJECT_PLAN.md) |

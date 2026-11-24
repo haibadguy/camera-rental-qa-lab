@@ -1,5 +1,9 @@
 # Trạng thái thực thi Camera Rental
 
+## V2-M4/M5 · Ứng viên tích hợp
+
+`integration/v2-m4-m5` có báo cáo thực thu, đơn theo kỳ, số thiết bị đang thuê, giờ sử dụng, lọc thương hiệu, kiểm kê có người duyệt và truy vết tới nguồn. Runtime `1c8c2e7` đạt Verify, Chrome desktop/mobile, nâng và phục hồi trên dữ liệu demo, cùng bàn giao độc lập. Ứng viên dùng một PR. CI chờ duyệt push. [Kiến trúc V2-M4](architecture.md#v2-m4--báo-cáo-và-kiểm-kê) · [Bằng chứng kiểm chứng](verification.md#v2-m4m5--24112026)
+
 ## V2-M3 · Quyết toán tại quầy
 
 PR #7 đưa cấu hình cọc, sổ thu/hoàn, duyệt và khấu trừ phí, giao dịch đảo và đối soát chứng từ cũ vào `main` tại `7148810`. Đơn mới kiểm đủ tiền trước khi bàn giao trên Web và API. [PR #7](https://github.com/haibadguy/camera-rental-qa-lab/pull/7) · [Kiến trúc](architecture.md#v2-m3--quyết-toán-tại-quầy)
