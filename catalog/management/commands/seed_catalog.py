@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from catalog.models import AssetUnit, Equipment
 
@@ -7,6 +8,7 @@ DEMO_EQUIPMENT = (
     (
         "CAM-001",
         "Sony A6400",
+        "Sony",
         300_000,
         2,
         Equipment.Kind.CAMERA,
@@ -15,6 +17,7 @@ DEMO_EQUIPMENT = (
     (
         "CAM-002",
         "Canon EOS R50",
+        "Canon",
         350_000,
         1,
         Equipment.Kind.CAMERA,
@@ -23,6 +26,7 @@ DEMO_EQUIPMENT = (
     (
         "LEN-001",
         "Sigma 30mm f/1.4 DC DN",
+        "Sigma",
         150_000,
         2,
         Equipment.Kind.LENS,
@@ -40,6 +44,7 @@ class Command(BaseCommand):
         for (
             code,
             name,
+            brand,
             daily_rate_vnd,
             total_stock,
             kind,
@@ -49,6 +54,7 @@ class Command(BaseCommand):
                 code=code,
                 defaults={
                     "name": name,
+                    "brand": brand,
                     "daily_rate_vnd": daily_rate_vnd,
                     "total_stock": total_stock,
                     "kind": kind,
@@ -59,7 +65,11 @@ class Command(BaseCommand):
             if was_created:
                 AssetUnit.objects.bulk_create(
                     [
-                        AssetUnit(equipment=equipment, code=f"{code}-U{number:02d}")
+                        AssetUnit(
+                            equipment=equipment,
+                            code=f"{code}-U{number:02d}",
+                            reporting_since=timezone.now(),
+                        )
                         for number in range(1, total_stock + 1)
                     ]
                 )

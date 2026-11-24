@@ -1,0 +1,81 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Truy vết đơn #{{ rental.pk }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'management-reports' %}">Báo cáo quản lý</a></nav>
+  <div class="page-heading">
+    <div>
+      <h1>Truy vết đơn #{{ rental.pk }}</h1>
+      <p>{{ rental.customer.get_username }} · {{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</p>
+    </div>
+    <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+  </div>
+  <div class="actions">
+    <a href="{% url 'staff-rental-detail' rental.pk %}">Chi tiết đơn</a>
+    {% if perms.catalog.operate_rentals %}<a href="{% url 'operations-order' rental.pk %}">Giao nhận</a>{% endif %}
+    {% if perms.catalog.record_rental_finance %}<a href="{% url 'finance-ledger' rental.pk %}">Quyết toán</a>{% endif %}
+  </div>
+  <section class="operation-section" aria-labelledby="operation-history">
+    <h2 id="operation-history">Lịch sử vận hành</h2>
+    <ul class="workspace-rows">
+      {% for change in changes %}
+        <li class="panel order-panel">
+          <strong>Đổi kỳ #{{ change.pk }} · {{ change.get_status_display }}</strong>
+          <p>{{ change.old_pickup_date|date:"d/m/Y" }} – {{ change.old_return_date|date:"d/m/Y" }} → {{ change.pickup_date|date:"d/m/Y" }} – {{ change.return_date|date:"d/m/Y" }}</p>
+          {% if change.reviewed_at %}<p class="muted">{{ change.reviewed_at|date:"d/m/Y H:i" }} · {{ change.reviewed_by.get_username }}</p><p>{{ change.review_note }}</p>{% endif %}
+        </li>
+      {% endfor %}
+      {% for hold in assignments %}
+        <li class="panel order-panel">
+          <strong>Giữ mã kho #{{ hold.pk }} · {{ hold.asset.code }}</strong>
+          <p>{{ hold.period.lower|date:"d/m/Y" }} – {{ hold.period.upper|date:"d/m/Y" }}{% if hold.replaces %} · Đổi từ {{ hold.replaces.asset.code }}{% endif %}</p>
+          <p class="muted">{{ hold.created_at|date:"d/m/Y H:i" }}{% if hold.changed_by %} · {{ hold.changed_by.get_username }}{% endif %}{% if hold.released_at %} · Giải phóng {{ hold.released_at|date:"d/m/Y H:i" }}{% endif %}</p>
+        </li>
+      {% endfor %}
+      {% for handover in handovers %}
+        <li id="handover-{{ handover.pk }}" class="panel order-panel">
+          <strong>Giao nhận #{{ handover.pk }} · {{ handover.asset.code }}</strong>
+          <p>Chuẩn bị {{ handover.prepared_at|date:"d/m/Y H:i" }} · {{ handover.prepared_by.get_username }}</p>
+          {% if handover.picked_up_at %}<p>Đã giao {{ handover.picked_up_at|date:"d/m/Y H:i" }} · {{ handover.picked_up_by.get_username }}</p>{% endif %}
+          {% if handover.returned_at %}<p>Đã nhận {{ handover.returned_at|date:"d/m/Y H:i" }} · {{ handover.returned_by.get_username }}</p>{% endif %}
+          {% if handover.inspected_at %}<p>{{ handover.get_inspection_result_display }} · {{ handover.inspected_at|date:"d/m/Y H:i" }} · {{ handover.inspected_by.get_username }}</p>{% endif %}
+          {% if handover.lost_at %}<p>Đã xác nhận mất {{ handover.lost_at|date:"d/m/Y H:i" }} · {{ handover.lost_by.get_username }}</p>{% endif %}
+        </li>
+      {% endfor %}
+      {% for incident in incidents %}
+        <li id="case-{{ incident.pk }}" class="panel order-panel">
+          <strong>Hồ sơ #{{ incident.pk }} · {{ incident.asset.code }} · {{ incident.get_kind_display }}</strong>
+          <p>{{ incident.get_state_display }} · {{ incident.reported_by.get_username }} · {{ incident.reported_at|date:"d/m/Y H:i" }}</p>
+          <p class="multiline">{{ incident.notes }}</p>
+          {% if incident.resolved_at %}<p>{{ incident.get_resolution_display }} · {{ incident.resolved_by.get_username }} · {{ incident.resolved_at|date:"d/m/Y H:i" }}</p><p>{{ incident.resolution_notes }}</p>{% endif %}
+        </li>
+      {% endfor %}
+      {% if not changes and not assignments and not handovers and not incidents %}
+        <li class="panel empty-state">Chưa có lịch sử đổi kỳ hoặc giao nhận theo mã kho.</li>
+      {% endif %}
+    </ul>
+  </section>
+  <section class="operation-section" aria-labelledby="finance-history">
+    <h2 id="finance-history">Sổ tiền và quyết định</h2>
+    <ul class="workspace-rows">
+      {% for charge in charges %}
+        <li id="charge-{{ charge.pk }}" class="panel order-panel">
+          <strong>Khoản thu #{{ charge.pk }} · {{ charge.get_reason_display }} · {{ charge.amount_vnd|vnd }}</strong>
+          <p>{{ charge.get_status_display }} · {{ charge.reviewed_by.get_username }} · {{ charge.reviewed_at|date:"d/m/Y H:i" }}</p>
+          <p class="multiline">{{ charge.review_note }}</p>
+          {% if charge.incident_id %}<a href="#case-{{ charge.incident_id }}">Hồ sơ #{{ charge.incident_id }}</a>{% endif %}
+        </li>
+      {% endfor %}
+      {% for entry in entries %}
+        <li id="entry-{{ entry.pk }}" class="panel order-panel">
+          <strong>Giao dịch #{{ entry.pk }} · {{ entry.get_kind_display }} · {{ entry.amount_vnd|vnd }}</strong>
+          <p class="muted">{{ entry.recorded_at|date:"d/m/Y H:i" }} · {{ entry.recorded_by.get_username }}</p>
+          {% if entry.notes %}<p class="multiline">{{ entry.notes }}</p>{% endif %}
+          {% if entry.charge_id %}<a href="#charge-{{ entry.charge_id }}">Khoản thu #{{ entry.charge_id }}</a>{% endif %}
+          {% if entry.reverses_id %}<a href="#entry-{{ entry.reverses_id }}">Giao dịch gốc #{{ entry.reverses_id }}</a>{% endif %}
+        </li>
+      {% endfor %}
+      {% if not entries and not charges %}<li class="panel empty-state">Chưa có giao dịch hoặc quyết định phí.</li>{% endif %}
+    </ul>
+  </section>
+{% endblock %}

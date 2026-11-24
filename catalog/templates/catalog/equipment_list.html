@@ -27,7 +27,7 @@
     </div>
 
     <div class="catalog-workspace">
-      <details class="catalog-filters panel" id="bo-loc" data-catalog-filters{% if request.GET.search or request.GET.pickup_date or request.GET.return_date or form.errors %} data-filters-active{% endif %} open>
+      <details class="catalog-filters panel" id="bo-loc" data-catalog-filters{% if request.GET.search or request.GET.brand or request.GET.pickup_date or request.GET.return_date or form.errors %} data-filters-active{% endif %} open>
         <summary>Bộ lọc</summary>
         <form method="get" action="{% url 'equipment-list' %}#thiet-bi" class="filters" aria-label="Lọc thiết bị và tra cứu tồn kho">
           <h3>Bộ lọc</h3>
@@ -35,6 +35,10 @@
           {{ form.kind.errors }}
           <div class="filter-field">
             {{ form.search.label_tag }}{{ form.search }}{{ form.search.errors }}
+          </div>
+          <div class="filter-field">
+            {{ form.brand.label_tag }}{{ form.brand }}{{ form.brand.errors }}
+            <datalist id="catalog-brands">{% for brand in brands %}<option value="{{ brand }}">{% endfor %}</datalist>
           </div>
           <fieldset class="filter-dates">
             <legend>Kỳ thuê</legend>
@@ -62,7 +66,7 @@
             <li class="card product-card{% if item.available_stock %} has-quick-book{% endif %}">
               {% include "catalog/equipment_art.html" %}
               <div class="card-body">
-                <p class="code">{{ item.get_kind_display }} <span aria-hidden="true">/</span> {{ item.code }}</p>
+                <p class="code">{{ item.get_kind_display }} <span aria-hidden="true">/</span> {{ item.code }}{% if item.brand %} · {{ item.brand }}{% endif %}</p>
                 <h3><a class="product-link" href="{% url 'equipment-detail' item.pk %}{% if item.available_stock != None %}?pickup_date={{ form.cleaned_data.pickup_date|date:'Y-m-d' }}&amp;return_date={{ form.cleaned_data.return_date|date:'Y-m-d' }}{% endif %}">{{ item.name }}</a></h3>
                 {% if item.specifications %}<p class="product-description">{{ item.specifications.splitlines|first|truncatewords:12 }}</p>{% endif %}
                 {% if item.available_stock != None %}<p class="stock-caption {% if not item.available_stock %}stock-empty{% endif %}">Còn theo lịch: {{ item.available_stock }}</p>{% endif %}

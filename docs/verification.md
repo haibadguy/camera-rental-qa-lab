@@ -11,7 +11,6 @@
 | Tranh chấp PostgreSQL | **Pass**, 6/6 chạy riêng trong 2,019 giây. Cùng mã ghi thu đồng thời tạo một bút toán. Hai yêu cầu hoàn khác mã cạnh tranh cùng số dư nhận `201` và `409`. Các ca đồng thời về tồn và lịch tiếp tục đạt. |
 | HTTP smoke | **Pass**. API từ chối giao khi thiếu tiền, từ chối khách ghi sổ, trả cùng ID khi gửi lại và đối chiếu khoản hoàn sau hủy. Duy trì luồng đặt nhiều SKU, đổi kỳ, giao nhận, kiểm tra và lịch kho. |
 | Chrome headless | **Pass** tại 1440 × 1000, 390 × 844 và 320 × 780. Dùng các SKU `FINUI-1440`, `FINUI-390`, `FINUI-320` trên DB kiểm thử, đơn #5–#7 kỳ 24–25/11. Quản lý cấu hình cọc 70.000 ₫. Nhân viên thu 120.000 ₫ tiền thuê và 70.000 ₫ tiền cọc, bàn giao và nhận trả. Quản lý duyệt phí 45.000 ₫, đóng sự cố và khấu trừ. Nhân viên hoàn 25.000 ₫. Khách thấy số tiền hoàn trên đơn. Đã xem ảnh, kiểm thứ tự Tab cho form thu và xác nhận luồng không tràn ngang, lỗi JS hoặc HTTP 5xx. |
-| GitHub Actions | **Not Run** cho V2-M3. Ứng viên local chờ duyệt push. |
 
 Chạy từ archive của SHA trên. Override IPAM tạm nằm ngoài repo dùng subnet `10.250.52.0/24`. Các volume cũ được giữ.
 
@@ -22,6 +21,11 @@ docker exec camera-v2-m3-review-cda42501-web-1 python manage.py test catalog.tes
 ```
 
 Script Chrome và fixture nằm trong thư mục tạm `camera-v2-m3-browser-review`, chạy với `CAMERA_M3_URL=http://127.0.0.1:18052` và `CAMERA_M3_PLAYWRIGHT` trỏ đến Playwright Core. Ca kiểm thử hồi quy bàn giao ban đầu thiếu bước thu tiền cho đơn mới. Fixture đã được cập nhật để đi qua sổ chung và các khẳng định về tồn kho được giữ.
+
+### CI V2-M3 trên GitHub
+
+- **Nhánh tính năng · Pass.** Run push trên `feature/v2-m3` đạt tại `43d81465dc58ffa68d8d0f211af32117c644826a`. [GitHub Actions](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45273030183)
+- **Sau merge · Pass.** PR #7 vào `main` ngày 24/11/2026 tại `71488107305dd5968b005c2564b77032f8cbf27c`. Run push trên cùng SHA kết thúc với `success`. [PR #7](https://github.com/haibadguy/camera-rental-qa-lab/pull/7) · [GitHub Actions trên main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45273559850)
 
 ## V2-M2 · 24/11/2026
 

@@ -1,0 +1,91 @@
+{% extends "catalog/base.html" %}
+{% block title %}Phiên kiểm kê #{{ stocktake.pk }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'stocktakes' %}">Kiểm kê</a></nav>
+  <div class="page-heading">
+    <div>
+      <h1>Kiểm kê {{ stocktake.equipment.code }}</h1>
+      <p>{{ stocktake.equipment.name }} · Phiên #{{ stocktake.pk }}</p>
+      <p class="muted">Mở {{ stocktake.opened_at|date:"d/m/Y H:i" }} · {{ stocktake.opened_by.get_username }}</p>
+      {% if stocktake.closed_at %}<p class="muted">Chốt {{ stocktake.closed_at|date:"d/m/Y H:i" }} · {{ stocktake.closed_by.get_username }}</p>{% endif %}
+    </div>
+    {% if stocktake.closed_at %}<span class="status status-returned">Đã chốt</span>{% else %}<span class="status status-confirmed">Đang kiểm</span>{% endif %}
+  </div>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="order-layout">
+    <section aria-labelledby="lines-heading">
+      <h2 id="lines-heading">Kết quả theo mã kho</h2>
+      <ul class="workspace-rows">
+        {% for line in lines %}
+          <li class="panel order-panel">
+            <h3>{{ line.code }}</h3>
+            <dl class="details order-details">
+              <div><dt>Kỳ vọng lúc mở</dt><dd>{{ line.get_expected_display }}</dd></div>
+              <div><dt>Đối chiếu</dt><dd>{% if line.observed %}{{ line.get_observed_display }}{% else %}Chưa ghi{% endif %}</dd></div>
+            </dl>
+            {% if line.counted_at %}<p class="muted">{{ line.counted_by.get_username }} · {{ line.counted_at|date:"d/m/Y H:i" }}</p>{% endif %}
+            {% if line.notes %}<p class="multiline">{{ line.notes }}</p>{% endif %}
+            {% if line.movement_id %}<a href="#move-{{ line.movement_id }}">Lượt giao nhận #{{ line.movement_id }}</a>{% endif %}
+            {% if line.resolved_at %}
+              <p>Đã xử lý · {{ line.resolved_by.get_username }} · {{ line.resolved_at|date:"d/m/Y H:i" }}</p>
+              <p class="multiline">{{ line.resolution_note }}</p>
+            {% elif not stocktake.closed_at %}
+              {% if line.observed and line.expected != line.observed %}
+                <p class="status-warning">Chênh lệch chờ xử lý</p>
+                {% if perms.catalog.manage_rental_reporting %}
+                  <form method="post" class="operation-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="line_id" value="{{ line.pk }}">
+                    <label for="notes-{{ line.pk }}">Lý do xử lý {{ line.code }}</label>
+                    <textarea id="notes-{{ line.pk }}" name="notes" required maxlength="2000" rows="2"></textarea>
+                    <button type="submit" name="action" value="resolve">Chốt chênh lệch</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+              <p><a href="?code={{ line.code|urlencode }}#observation">Đối chiếu {{ line.code }}</a></p>
+            {% endif %}
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Chưa có mã kho trong phiên.</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% if not stocktake.closed_at %}
+      <section id="observation" class="panel order-panel" aria-labelledby="record-heading">
+        <h2 id="record-heading">Ghi đối chiếu</h2>
+        <form method="post" class="operation-form">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" name="action" value="record">Lưu đối chiếu</button>
+        </form>
+        {% if perms.catalog.manage_rental_reporting %}
+          <form method="post" class="actions">
+            {% csrf_token %}
+            <button class="button-outline" type="submit" name="action" value="close">Chốt phiên kiểm kê</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endif %}
+  </div>
+  <section class="operation-section" aria-labelledby="movements-heading">
+    <h2 id="movements-heading">Giao nhận phát sinh trong phiên</h2>
+    <ul class="workspace-rows">
+      {% for handover in movements %}
+        <li id="move-{{ handover.pk }}" class="panel workspace-row">
+          <div>
+            <strong>#{{ handover.pk }} · {{ handover.asset.code }}</strong>
+            {% if perms.catalog.manage_rental_reporting %}<p><a href="{% url 'management-audit' handover.reservation.line.rental_id %}#handover-{{ handover.pk }}">Truy vết đơn #{{ handover.reservation.line.rental_id }}</a></p>{% else %}<p>Đơn #{{ handover.reservation.line.rental_id }}</p>{% endif %}
+          </div>
+          <div>
+            {% if handover.picked_up_at and handover.picked_up_at >= stocktake.opened_at and handover.picked_up_at <= period_end %}<p>Giao {{ handover.picked_up_at|date:"d/m/Y H:i" }}</p>{% endif %}
+            {% if handover.returned_at and handover.returned_at >= stocktake.opened_at and handover.returned_at <= period_end %}<p>Nhận {{ handover.returned_at|date:"d/m/Y H:i" }}</p>{% endif %}
+            {% if handover.inspected_at and handover.inspected_at >= stocktake.opened_at and handover.inspected_at <= period_end %}<p>Kiểm {{ handover.inspected_at|date:"d/m/Y H:i" }}</p>{% endif %}
+            {% if handover.lost_at and handover.lost_at >= stocktake.opened_at and handover.lost_at <= period_end %}<p>Xác nhận mất {{ handover.lost_at|date:"d/m/Y H:i" }}</p>{% endif %}
+          </div>
+        </li>
+      {% empty %}
+        <li class="panel empty-state">Chưa có giao nhận phát sinh.</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

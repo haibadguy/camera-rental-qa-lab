@@ -2,9 +2,9 @@
 
 ## V2-M3 · Quyết toán tại quầy
 
-`feature/v2-m3` có cấu hình cọc theo mẫu, chốt cọc theo dòng, sổ thu/hoàn, duyệt và khấu trừ phí, liên kết giao dịch đảo và đối soát chứng từ cũ. Đơn mới kiểm đủ tiền trước khi bàn giao trên Web và API. [Chính sách đã duyệt](v2-product-design.md#quyết-định-trước-v2-m3) · [Kiến trúc](architecture.md#v2-m3--quyết-toán-tại-quầy)
+PR #7 đưa cấu hình cọc, sổ thu/hoàn, duyệt và khấu trừ phí, giao dịch đảo và đối soát chứng từ cũ vào `main` tại `7148810`. Đơn mới kiểm đủ tiền trước khi bàn giao trên Web và API. [PR #7](https://github.com/haibadguy/camera-rental-qa-lab/pull/7) · [Kiến trúc](architecture.md#v2-m3--quyết-toán-tại-quầy)
 
-Runtime `be0a617` đã đạt Verify trên Compose biệt lập, 62 test PostgreSQL và kiểm tra Chrome desktop/mobile. CI của V2-M3 chờ duyệt push. [Bằng chứng V2-M3](verification.md#v2-m3--24112026)
+Runtime `be0a617` đã đạt Verify trên Compose biệt lập, 62 test PostgreSQL và kiểm tra Chrome desktop/mobile. CI sau merge đạt trên `7148810`. [Bằng chứng V2-M3](verification.md#ci-v2-m3-trên-github)
 
 ## V2-M2 · Đã tích hợp
 

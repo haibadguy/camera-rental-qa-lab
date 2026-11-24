@@ -2,6 +2,7 @@
 
 from .custody import prepare_asset, receipt_summary, receive_asset, rental_handovers
 from .equipment import (
+    catalog_brands,
     catalog_items,
     create_equipment,
     enable_asset_tracking,
@@ -55,18 +56,36 @@ from .rentals import (
     return_rental,
     staff_rentals,
 )
-from .roles import can_manage, can_manage_finance, can_operate, can_record_finance
+from .reporting import rental_audit, rental_report
+from .roles import (
+    can_count_stock,
+    can_manage,
+    can_manage_finance,
+    can_manage_reporting,
+    can_operate,
+    can_record_finance,
+)
 from .schedule_changes import (
     change_kind,
     preview_rental_change,
     request_rental_change,
     review_rental_change,
 )
+from .stocktake import (
+    OBSERVATIONS,
+    close_stocktake,
+    open_stocktake,
+    record_stocktake_line,
+    resolve_stocktake_line,
+    stocktake_detail,
+    stocktake_history,
+)
 
 __all__ = [
     "MAX_RENTAL_DAYS",
     "MAX_RENTAL_QUANTITY",
     "MIN_RENTAL_QUANTITY",
+    "OBSERVATIONS",
     "RentalError",
     "StaffRentalQueue",
     "asset_calendar",
@@ -74,8 +93,10 @@ __all__ = [
     "book_order",
     "book_rental",
     "can_cancel",
+    "can_count_stock",
     "can_manage",
     "can_manage_finance",
+    "can_manage_reporting",
     "can_mark_no_show",
     "can_operate",
     "can_pick_up",
@@ -84,9 +105,11 @@ __all__ = [
     "can_return",
     "cancel_rental",
     "catalog_availability",
+    "catalog_brands",
     "catalog_items",
     "change_kind",
     "checked_out_quantity",
+    "close_stocktake",
     "create_equipment",
     "customer_rentals",
     "enable_asset_tracking",
@@ -96,6 +119,7 @@ __all__ = [
     "inspect_asset",
     "maintenance_cases",
     "mark_no_show",
+    "open_stocktake",
     "ops_rentals",
     "pick_up_rental",
     "plan_maintenance",
@@ -105,19 +129,25 @@ __all__ = [
     "propose_finance_charge",
     "receipt_summary",
     "receive_asset",
+    "record_stocktake_line",
     "register_asset",
     "rental_asset_history",
+    "rental_audit",
     "rental_handovers",
+    "rental_report",
     "replace_reserved_asset",
     "report_incident",
     "request_rental_change",
     "resolve_case",
+    "resolve_stocktake_line",
     "return_rental",
     "review_finance_charge",
     "review_rental_change",
     "set_equipment_deposit",
     "staff_rentals",
     "start_repair",
+    "stocktake_detail",
+    "stocktake_history",
     "unassigned_legacy_rentals",
     "update_equipment",
     "validate_period",

@@ -2,7 +2,12 @@
 {% block title %}Lịch kho {{ equipment.code }} | Camera Rental{% endblock %}
 {% block content %}
   <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'staff-equipment' %}">Kho thiết bị</a></nav>
-  <div class="page-heading"><h1>Lịch kho {{ equipment.code }}</h1></div>
+  <div class="page-heading">
+    <h1>Lịch kho {{ equipment.code }}</h1>
+    {% if equipment.tracks_assets and perms.catalog.count_rental_stock %}
+      <a class="button button-outline" href="{% url 'stocktakes' %}?equipment={{ equipment.pk }}">Kiểm kê mẫu</a>
+    {% endif %}
+  </div>
   <div class="order-layout">
     <section class="panel order-panel">
       <h2>{{ equipment.name }}</h2>

@@ -74,7 +74,7 @@ class AssetForm(forms.ModelForm):
 
 
 class CatalogFilterForm(PeriodForm):
-    field_order = ["search", "kind", "pickup_date", "return_date"]
+    field_order = ["search", "kind", "brand", "pickup_date", "return_date"]
 
     search = forms.CharField(
         label="Tên hoặc mã thiết bị",
@@ -86,6 +86,12 @@ class CatalogFilterForm(PeriodForm):
         label="Loại thiết bị",
         choices=[("", "Tất cả thiết bị"), *Equipment.Kind.choices],
         required=False,
+    )
+    brand = forms.CharField(
+        label="Thương hiệu",
+        max_length=80,
+        required=False,
+        widget=forms.TextInput(attrs={"list": "catalog-brands"}),
     )
 
     def __init__(self, *args, **kwargs):
@@ -100,6 +106,7 @@ class EquipmentForm(forms.ModelForm):
         fields = (
             "code",
             "kind",
+            "brand",
             "name",
             "specifications",
             "accessory_checklist",
