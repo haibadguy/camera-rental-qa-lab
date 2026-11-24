@@ -8,7 +8,7 @@ if (catalogFilters) {
     const filterValues = new FormData(filterForm);
     for (const link of categoryLinks) {
       const url = new URL(link.href);
-      for (const name of ["search", "pickup_date", "return_date"]) {
+      for (const name of ["search", "brand", "pickup_date", "return_date"]) {
         const value = filterValues.get(name);
         if (value) url.searchParams.set(name, value);
         else url.searchParams.delete(name);

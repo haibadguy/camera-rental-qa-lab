@@ -9,7 +9,11 @@
 | V2-M1 · Tài sản và đơn nhiều dòng | Đã tích hợp và xác minh | PR #5 đã vào `main` tại `9f7e3f5`. Đặt và hủy nguyên đơn, giữ tài sản suốt kỳ, đổi cùng mẫu có lịch sử, backfill dữ liệu Base. [Hợp đồng hiện tại](docs/architecture.md#v2-m1--đặt-nhiều-thiết-bị) · [Bằng chứng V2-M1](docs/verification.md#ci-v2-m1-trên-github) |
 | Chính sách V2-M2 | Hải đã duyệt ngày 23/11/2026 | Hạn trả, đổi/gia hạn, giao nhận từng món, sự cố và quyền vận hành. [Năm chính sách](docs/v2-product-design.md#quyết-định-trước-v2-m2) |
 | V2-M2 · Rental Operations | Đã tích hợp, CI xanh trên `main` | PR #6 đã vào `main` tại `277f5c0`. Đổi/gia hạn, giao nhận theo mã kho, kiểm tra, cách ly và bảo trì. [Bằng chứng sau merge](docs/verification.md#ci-v2-m2-trên-github) |
-| V2-M3 · Pricing & Finance | Đã triển khai và kiểm chứng local | Hải duyệt ngày 24/11/2026. `feature/v2-m3` có cọc, sổ thu/hoàn, duyệt ngoại lệ, điều chỉnh và đối soát dữ liệu cũ. Ứng viên chờ duyệt push để chạy CI. [Chính sách](docs/v2-product-design.md#quyết-định-trước-v2-m3) · [Bằng chứng V2-M3](docs/verification.md#v2-m3--24112026) |
+| V2-M3 · Pricing & Finance | Đã tích hợp, CI xanh trên `main` | PR #7 đã vào `main` tại `7148810`. Cọc, sổ thu/hoàn, duyệt ngoại lệ, điều chỉnh và đối soát dữ liệu cũ. [Bằng chứng sau merge](docs/verification.md#ci-v2-m3-trên-github) |
+| V2-M4 · Management & Reporting | Đã triển khai và kiểm chứng local | Báo cáo quản lý, thương hiệu, kiểm kê và truy vết trên `integration/v2-m4-m5`. [Chỉ số và kiểm kê](docs/v2-product-design.md#quyết-định-trước-v2-m4) |
+| V2-M5 · Hoàn thiện kỹ thuật | Đạt local, chờ CI ứng viên | Đã kiểm end-to-end, nâng và phục hồi dữ liệu demo, UI và bàn giao từ checkout sạch. Hải duyệt riêng cửa hàng pilot, dữ liệu thật và phát hành. [Bằng chứng V2-M4/M5](docs/verification.md#v2-m4m5--24112026) |
+
+Đợt kế tiếp dùng một PR từ `integration/v2-m4-m5` vào `main`, với các commit nhỏ theo từng tính năng để dễ review.
 
 ## Base v1.0 · Technical Foundation
 

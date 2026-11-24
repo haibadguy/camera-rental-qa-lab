@@ -1,9 +1,65 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from catalog import api, finance_api, finance_web, operations_api, operations_web, views
+from catalog import (
+    api,
+    finance_api,
+    finance_web,
+    management_api,
+    management_web,
+    operations_api,
+    operations_web,
+    views,
+)
 
 urlpatterns = [
+    path("manager/reports/", management_web.reports, name="management-reports"),
+    path(
+        "manager/reports/rentals/<int:rental_id>/",
+        management_web.audit,
+        name="management-audit",
+    ),
+    path("staff/stocktakes/", management_web.stocktakes, name="stocktakes"),
+    path(
+        "staff/stocktakes/<int:stocktake_id>/",
+        management_web.stocktake,
+        name="stocktake-detail",
+    ),
+    path(
+        "api/v2/management/reports/",
+        management_api.reports,
+        name="api-management-reports",
+    ),
+    path(
+        "api/v2/management/rentals/<int:rental_id>/",
+        management_api.audit,
+        name="api-management-audit",
+    ),
+    path(
+        "api/v2/operations/stocktakes/",
+        management_api.stocktakes,
+        name="api-stocktakes",
+    ),
+    path(
+        "api/v2/operations/stocktakes/<int:stocktake_id>/",
+        management_api.stocktake,
+        name="api-stocktake-detail",
+    ),
+    path(
+        "api/v2/operations/stocktakes/<int:stocktake_id>/lines/",
+        management_api.record_observation,
+        name="api-stocktake-record",
+    ),
+    path(
+        "api/v2/operations/stocktakes/<int:stocktake_id>/lines/<int:line_id>/resolve/",
+        management_api.resolve_discrepancy,
+        name="api-stocktake-resolve",
+    ),
+    path(
+        "api/v2/operations/stocktakes/<int:stocktake_id>/close/",
+        management_api.close_stocktake,
+        name="api-stocktake-close",
+    ),
     path("", views.equipment_list, name="equipment-list"),
     path(
         "login/",

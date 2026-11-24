@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from catalog.inventory import free_assets
 from catalog.models import AssetReservation, Equipment, Rental, RentalLine
-from catalog.roles import FINANCE_CLERK_GROUP, OPERATOR_GROUP
+from catalog.roles import FINANCE_CLERK_GROUP, OPERATOR_GROUP, STOCK_COUNTER_GROUP
 from catalog.services import checked_out_quantity
 
 
@@ -36,7 +36,11 @@ class Command(BaseCommand):
             if is_staff:
                 user.groups.add(
                     *Group.objects.filter(
-                        name__in=(OPERATOR_GROUP, FINANCE_CLERK_GROUP)
+                        name__in=(
+                            OPERATOR_GROUP,
+                            FINANCE_CLERK_GROUP,
+                            STOCK_COUNTER_GROUP,
+                        )
                     )
                 )
 

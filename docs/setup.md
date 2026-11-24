@@ -51,9 +51,11 @@ Khi địa chỉ hoặc giờ còn trống, ứng dụng báo phần nào chưa 
 .\scripts\dev.ps1 -Action Verify -Port 8010
 ```
 
-`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Suite kiểm tranh chấp đặt đơn, bàn giao, đổi kỳ, bảo trì và ghi sổ tiền. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002`, `catalog.0004`, `catalog.0005` và `catalog.0006`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke tạo tài khoản và đơn mới trên dữ liệu dùng riêng cho lần kiểm tra.
+`Verify` tạo project Compose và volume mới, chạy system check, kiểm tra thiếu migration, bộ test PostgreSQL và smoke qua HTTP thật. Suite kiểm tranh chấp đặt đơn, bàn giao, đổi kỳ, bảo trì, ghi sổ tiền và mở phiên kiểm kê. Kiểm thử nâng dữ liệu dùng các mốc `catalog.0002`, `catalog.0004`, `catalog.0005`, `catalog.0006` và `catalog.0007`. Nhật ký in tên project và đường dẫn file cấu hình. Chọn cổng trống cho lượt chạy. Smoke ghi dữ liệu mẫu trên project riêng.
 
 Để xác minh ứng viên, dùng checkout sạch của SHA đã chọn và chạy từ thư mục gốc của checkout đó. Ghi SHA vào kết quả. Có thể thêm `-Project camera-base-rc` để phân biệt nhóm kiểm tra, script vẫn tự thêm hậu tố riêng vào tên project.
+
+Nếu Docker báo hết dải subnet mặc định, đối chiếu `docker network inspect` và tuyến mạng của máy. Chọn subnet trống rồi tạo file Compose override ngoài repo với `networks.default.ipam.config` và `subnet` tương ứng. Đặt `COMPOSE_FILE` là `compose.yaml;<đường-dẫn-override>` trong phiên PowerShell chạy Verify. Giữ cấu hình đó khi gọi lại project.
 
 Khi duyệt Base local/demo, mở cổng của project biệt lập. Từ danh mục, tìm `LEN-001`, chọn kỳ tương lai, thử đăng ký, đặt đơn và hủy từ **Đơn của tôi**. Đăng nhập bằng tài khoản staff để xem **Kho thiết bị**, **Quản lý đơn thuê** và đơn demo ở nhóm **Trả hôm nay**. Dùng địa chỉ, giờ và kênh hỗ trợ mẫu nếu cần xem trạng thái cấu hình có nội dung.
 
@@ -109,3 +111,40 @@ docker compose exec web python manage.py set_rental_role '<ten-quan-ly>' finance
 Tài khoản `demo-staff` mới đã có quyền ghi thu và hoàn. Với tài khoản demo đã tồn tại từ trước, dùng lệnh cấp quyền ở trên. Quản lý chỉnh cọc ở **Kho thiết bị** và duyệt phí, miễn hoặc khấu trừ tại **Quyết toán tại quầy** trên đơn. Nhân viên ghi tiền mặt hoặc chuyển khoản khi thực thu hoặc thực hoàn. Khoản thu cũ cần chứng từ và quản lý xác nhận trước khi đối soát.
 
 Migration `0007` chặn hạ cấp khi có sổ tiền, đơn mới theo V2-M3 hoặc cấu hình cọc. Diễn tập phương án khôi phục trên bản sao trước khi nâng dữ liệu thật. [Hợp đồng Web/API](architecture.md#v2-m3--quyết-toán-tại-quầy)
+
+## V2-M4 · Quyền báo cáo và kiểm kê
+
+Nhóm `Rental Stock Counters` mở phiên và ghi đối chiếu. Nhóm `Rental Reporting Managers` xem báo cáo, truy vết nguồn và chốt chênh lệch. Tài khoản đã có cần được cấp quyền theo phân công. Tài khoản demo mới `demo-staff` có quyền kiểm kê.
+
+```powershell
+docker compose exec web python manage.py set_rental_role demo-staff stock-counter
+docker compose exec web python manage.py set_rental_role '<ten-quan-ly>' reporting-manager
+```
+
+Lệnh cấp quyền yêu cầu tài khoản nhân viên đang hoạt động. Trong project demo biệt lập, dùng file môi trường và tên project đã in ở Verify. Có thể dùng `demo-staff` để thử quyền báo cáo trên dữ liệu demo.
+
+```powershell
+$verifyEnvFile = '<duong-dan-env-tu-Verify>'
+$verifyProject = '<ten-project-tu-Verify>'
+docker compose --env-file $verifyEnvFile -p $verifyProject exec -T web python manage.py set_rental_role demo-staff reporting-manager
+```
+
+Mở phiên từ **Kiểm kê** hoặc màn **Mã kho và lịch giữ** của mẫu đã chuyển đổi. Ghi kết quả từng mã, chọn lượt giao nhận khi có phát sinh, rồi quản lý chốt các dòng khác kỳ vọng. Quản lý vào **Báo cáo**, chọn kỳ và mở liên kết đơn hoặc giao dịch để đối chiếu.
+
+Migration `0008` bảo toàn dữ liệu cũ, ghi mốc theo dõi khi nâng và bảo vệ lịch sử báo cáo khi hạ cấp. [Định nghĩa số liệu](v2-product-design.md#quyết-định-trước-v2-m4) · [Hợp đồng Web/API](architecture.md#v2-m4--báo-cáo-và-kiểm-kê)
+
+## V2-M5 · Diễn tập khôi phục local
+
+Dùng tên project và file môi trường in trong lượt `Verify`, cùng tên database khôi phục chưa tồn tại. Sau khi chạy luồng demo, dừng ghi vào dữ liệu kiểm thử trước khi so sánh.
+
+```powershell
+$verifyProject = '<ten-project-tu-Verify>'
+$verifyEnvFile = '<duong-dan-env-tu-Verify>'
+$composeVerify = @('--env-file', $verifyEnvFile, '-p', $verifyProject)
+docker compose @composeVerify exec -T db pg_dump -U camera_rental -d camera_rental -Fc -f /tmp/camera-rental-m5-demo.dump
+docker compose @composeVerify exec -T db createdb -U camera_rental camera_m5_restore
+docker compose @composeVerify exec -T db pg_restore -U camera_rental -d camera_m5_restore --exit-on-error --no-owner --no-privileges /tmp/camera-rental-m5-demo.dump
+docker compose @composeVerify exec -T -e POSTGRES_DB=camera_m5_restore web python manage.py check --database default
+```
+
+Đối chiếu schema và bản ghi ở hai database, gồm đơn, giao nhận, sự cố, sổ tiền và phiên kiểm kê. Khi diễn tập nâng từ bản trước, khôi phục dump bản trước vào database mới rồi chạy `migrate --noinput` với `POSTGRES_DB` trỏ đến database đó. Bản sao demo phục vụ nghiệm thu kỹ thuật. Việc dùng dữ liệu cửa hàng và chuyển đổi pilot cần Hải duyệt. [Bằng chứng kiểm chứng](verification.md)

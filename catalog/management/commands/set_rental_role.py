@@ -3,13 +3,7 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from catalog.roles import (
-    FINANCE_CLERK_GROUP,
-    FINANCE_MANAGER_GROUP,
-    MANAGER_GROUP,
-    OPERATOR_GROUP,
-    ROLE_GROUPS,
-)
+from catalog.roles import ROLE_FAMILIES, ROLE_GROUPS
 
 
 class Command(BaseCommand):
@@ -26,8 +20,7 @@ class Command(BaseCommand):
         if account is None:
             raise CommandError("Use an existing active staff account.")
         target_name = ROLE_GROUPS[role]
-        finance = (FINANCE_CLERK_GROUP, FINANCE_MANAGER_GROUP)
-        family = finance if target_name in finance else (OPERATOR_GROUP, MANAGER_GROUP)
+        family = next(family for family in ROLE_FAMILIES if target_name in family)
         groups = Group.objects.filter(name__in=family)
         target = groups.filter(name=target_name).first()
         if target is None:

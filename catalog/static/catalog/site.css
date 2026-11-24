@@ -250,6 +250,11 @@ textarea { resize: vertical; }
 .operation-section { margin-top: 1.5rem; }
 .operation-form { display: grid; gap: .5rem; margin-top: .9rem; }
 .operation-form button { justify-self: start; }
+.report-period { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; padding: 1rem; }
+.report-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr)); gap: .75rem; margin: .75rem 0 1.25rem; }
+.report-metrics > div { padding: 1rem; }
+.report-metrics dt { color: var(--muted); line-height: 1.4; }
+.report-metrics dd { margin: .35rem 0 0; font-size: clamp(1.22rem, 2.5vw, 1.8rem); font-weight: 750; overflow-wrap: anywhere; }
 .multiline { white-space: pre-line; overflow-wrap: anywhere; }
 .status-warning { margin-top: .25rem; color: #855227; font-size: .74rem; }
 .inventory-row { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1.65fr) auto; }

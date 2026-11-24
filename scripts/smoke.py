@@ -228,6 +228,42 @@ def main():
         "PASS: multi-SKU web booking, v2 quote and approval, staff asset calendar and full cancellation"
     )
 
+    branded = api.request("/api/equipment/?kind=CAMERA&brand=sony")
+    assert [row["id"] for row in branded] == [camera["id"]]
+    assert "Sony A6400" in customer.request("/?kind=CAMERA&brand=Sony")
+    stocktakes = "/api/v2/operations/stocktakes/"
+    api.request(stocktakes, credentials=credentials, expected=403)
+    opened = api.request(
+        stocktakes,
+        payload={"equipment_id": camera["id"]},
+        credentials=staff_credentials,
+        expected=201,
+    )
+    stocktake_url = f"{stocktakes}{opened['id']}/"
+    snapshot = api.request(stocktake_url, credentials=staff_credentials)
+    assert len(snapshot["lines"]) == 2
+    first = snapshot["lines"][0]
+    recorded = api.request(
+        stocktake_url + "lines/",
+        payload={"code": first["code"], "observed": first["expected"]},
+        credentials=staff_credentials,
+    )
+    assert (
+        recorded["counted_by"] == staff_name
+        and recorded["expected"] == recorded["observed"]
+    )
+    assert first["code"] in staff.request(f"/staff/stocktakes/{opened['id']}/")
+    api.request(
+        stocktake_url + "close/",
+        payload={},
+        credentials=staff_credentials,
+        expected=403,
+    )
+    api.request(
+        "/api/v2/management/reports/", credentials=staff_credentials, expected=403
+    )
+    print("PASS: brand filtering, stocktake snapshot and permission boundaries")
+
 
 if __name__ == "__main__":
     main()

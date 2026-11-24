@@ -1,0 +1,39 @@
+{% extends "catalog/base.html" %}
+{% block title %}Kiểm kê thiết bị | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'staff-equipment' %}">Kho thiết bị</a></nav>
+  <div class="page-heading"><h1>Kiểm kê thiết bị</h1></div>
+  <div class="order-layout">
+    <section class="order-panel" aria-labelledby="sessions-heading">
+      <h2 id="sessions-heading">Phiên kiểm kê</h2>
+      <ul class="workspace-rows">
+        {% for session in page %}
+          <li class="panel workspace-row">
+            <div>
+              <a href="{% url 'stocktake-detail' session.pk %}">Phiên #{{ session.pk }} · {{ session.equipment.code }}</a>
+              <p class="muted">{{ session.opened_at|date:"d/m/Y H:i" }} · {{ session.opened_by.get_username }}</p>
+            </div>
+            {% if session.closed_at %}<span class="status status-returned">Đã chốt</span>{% else %}<span class="status status-confirmed">Đang kiểm</span>{% endif %}
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Chưa có phiên kiểm kê.</li>
+        {% endfor %}
+      </ul>
+      {% if page.has_other_pages %}
+        <nav class="actions" aria-label="Trang phiên kiểm kê">
+          {% if page.has_previous %}<a href="{% querystring page=page.previous_page_number %}">Trang trước</a>{% endif %}
+          <span>Trang {{ page.number }} / {{ page.paginator.num_pages }}</span>
+          {% if page.has_next %}<a href="{% querystring page=page.next_page_number %}">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </section>
+    <form method="post" class="panel order-panel" aria-labelledby="open-heading">
+      {% csrf_token %}
+      <h2 id="open-heading">Mở phiên mới</h2>
+      <div class="operation-form">
+        {{ form.as_p }}
+        <button type="submit">Mở phiên kiểm kê</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

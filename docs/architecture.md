@@ -87,6 +87,22 @@ Yêu cầu ghi sổ dùng `kind`, `command_id` và `amount_vnd` nếu thao tác 
 
 Migration `0007` giữ số tiền và lịch sử đơn cũ, và khởi đầu với sổ giao dịch trống. Không tự tạo chứng từ thu tiền. [Quyền và cách chạy demo](setup.md#v2-m3--quyền-quyết-toán) · [Chính sách V2-M3](v2-product-design.md#quyết-định-trước-v2-m3)
 
+## V2-M4 · Báo cáo và kiểm kê
+
+`reporting.py` đọc nguồn hiện hữu. Tổng thực thu dùng dấu của giao dịch gốc hoặc dấu đảo vào ngày ghi sổ. `finance.py` tiếp tục sở hữu quy tắc số dư. Đếm đơn theo ngày nhận cam kết. Tồn đang thuê lấy từ giao nhận hiện hành, gồm luồng tồn tổng cũ.
+
+Tỷ lệ sử dụng cắt các khoảng bàn giao thực tế theo ngày Việt Nam, thời điểm bắt đầu theo dõi và thời điểm ngừng sử dụng. Mẫu số tính cả thời gian cách ly trong đội cho thuê. Khoảng bàn giao nguyên đơn thiếu mốc theo mã bị trừ khỏi giờ có thể đo. Màn báo cáo hiển thị độ phủ và dẫn đến lượt giao nhận gốc. Hồ sơ truy vết giữ riêng quyền đọc của quản lý.
+
+`stocktake.py` chụp kỳ vọng theo mã kho khi mở phiên dưới khóa `Equipment`. Ghi và duyệt dòng kiểm kê khóa phiên để tránh chốt khi còn chênh lệch hoặc thiếu quan sát. Nhân viên liên kết lượt giao nhận phát sinh trong phiên với kết quả đối chiếu. Quản lý chốt chênh lệch bằng lý do. Kết quả kiểm kê lưu lịch sử, các thao tác đổi tình trạng thiết bị đi qua nghiệp vụ giao nhận và bảo trì đã có.
+
+| Điểm vào | Hợp đồng |
+| --- | --- |
+| Danh mục | Web và `GET /api/equipment/` nhận bộ lọc `brand` theo tên thương hiệu, so khớp không phân biệt hoa thường. Các trường phản hồi API hiện có giữ nguyên. |
+| Quản lý | `/manager/reports/` và `GET /api/v2/management/reports/?first=YYYY-MM-DD&last=YYYY-MM-DD`. Web dẫn đến bản ghi nguồn. API `GET /api/v2/management/rentals/{id}/` cung cấp lịch sử từng đơn. |
+| Kiểm kê | `/staff/stocktakes/` và `GET/POST /api/v2/operations/stocktakes/` để xem và mở phiên với `equipment_id`. API chi tiết nhận quan sát tại `/{id}/lines/`, xử lý tại `/{id}/lines/{line_id}/resolve/` và chốt tại `/{id}/close/` với quyền quản lý. |
+
+Migration `0008` giữ thương hiệu trống cho dữ liệu chưa xác nhận và ghi mốc theo dõi từ lúc nâng cho tài sản đã quản lý theo mã kho. [Quyền và cách kiểm chứng](setup.md#v2-m4--quyền-báo-cáo-và-kiểm-kê)
+
 ## Kiến trúc mục tiêu
 
 Camera Rental là modular monolith cho một cửa hàng. `catalog` giữ app label và ORM, `config` giữ settings và URL. Django Templates và JavaScript, DRF, PostgreSQL, Docker Compose và GitHub Actions phục vụ cùng ứng dụng.
@@ -102,6 +118,8 @@ Camera Rental là modular monolith cho một cửa hàng. `catalog` giữ app la
 | `operations.py` | Hàng đợi vận hành và giao dịch nối kết quả kiểm của Custody với Maintenance. |
 | `roles.py` | Quyền vận hành và xử lý ngoại lệ bằng các nhóm Django. |
 | `finance.py` | Quyết toán VND, cọc, thu/hoàn và các quyết định phí có truy vết. |
+| `reporting.py` | Chỉ số theo kỳ, độ phủ dữ liệu theo mã kho và truy vết quản lý. |
+| `stocktake.py` | Kỳ vọng theo phiên, kết quả kiểm kê và chốt chênh lệch. |
 | `services.py` | Điểm vào chung cho Web và DRF, công bố hàm từ module sở hữu. |
 
 `operations` gọi `custody` và `maintenance`. `maintenance` gọi `custody` để đóng lượt giao nhận có mất. `custody` và các module cần kiểm lịch gọi `inventory`. Các giao dịch ảnh hưởng tồn khóa `Equipment` theo ID tăng dần trước `Rental`, rồi kiểm lại điều kiện dưới khóa.
@@ -113,20 +131,22 @@ catalog/
   models.py, services.py, errors.py
   equipment.py, inventory.py, rentals.py, schedule_changes.py
   custody.py, maintenance.py, operations.py, roles.py, finance.py
+  reporting.py, stocktake.py
   views.py, forms.py, api.py, operations_web.py, operations_api.py
-  finance_web.py, finance_api.py
-  migrations/                 0001–0007
+  finance_web.py, finance_api.py, management_web.py, management_api.py
+  migrations/                 0001–0008
   templates/catalog/         màn Base/M1 và template dùng chung
     customer/                 yêu cầu đổi hoặc gia hạn
-    staff/                    giao nhận, bảo trì và quyết toán
+    staff/                    giao nhận, bảo trì, quyết toán và kiểm kê
+    manager/                  báo cáo và truy vết
   static/catalog/             CSS, JavaScript, ảnh, phông chữ
   tests.py, test_asset_rentals.py, test_schedule_changes.py
-  test_operations.py, test_maintenance.py, test_finance.py
+  test_operations.py, test_maintenance.py, test_finance.py, test_management.py
 config/                        settings và URL
 docs/                          đặc tả, thiết kế, thiết lập và bằng chứng
 ```
 
-Adapter vận hành và quyết toán tách theo luồng người dùng. Màn Base/M1 tiếp tục dùng đường dẫn template hiện tại. Các truy vấn báo cáo sẽ có module riêng khi V2-M4 bổ sung số liệu quản lý. [Roadmap](../ROADMAP.md#roadmap-v20)
+Adapter vận hành, quyết toán và quản lý tách theo luồng người dùng. Màn Base/M1 tiếp tục dùng đường dẫn template hiện tại. [Roadmap](../ROADMAP.md#roadmap-v20)
 
 ### Kiểm chứng thay đổi
 

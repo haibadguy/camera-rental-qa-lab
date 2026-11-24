@@ -74,7 +74,9 @@ def equipment_list(request):
     filters_are_valid = form.is_valid()
     filters = form.cleaned_data if form.is_bound else {}
     equipment = services.catalog_items(
-        search=filters.get("search", ""), kind=filters.get("kind", "")
+        search=filters.get("search", ""),
+        kind=filters.get("kind", ""),
+        brand=filters.get("brand", ""),
     )
     if filters_are_valid:
         pickup, dropoff = filters["pickup_date"], filters["return_date"]
@@ -91,7 +93,9 @@ def equipment_list(request):
                 None, "Chọn cả ngày nhận và ngày trả để kiểm tra lịch trống."
             )
     return render(
-        request, "catalog/equipment_list.html", {"equipment": equipment, "form": form}
+        request,
+        "catalog/equipment_list.html",
+        {"equipment": equipment, "form": form, "brands": services.catalog_brands()},
     )
 
 

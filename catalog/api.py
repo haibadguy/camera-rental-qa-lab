@@ -37,6 +37,7 @@ class CatalogQuerySerializer(serializers.Serializer):
     kind = serializers.ChoiceField(
         choices=Equipment.Kind.choices, required=False, allow_blank=True
     )
+    brand = serializers.CharField(max_length=80, required=False, allow_blank=True)
 
 
 class EquipmentSerializer(serializers.ModelSerializer):

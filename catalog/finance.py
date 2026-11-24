@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
 from django.db import transaction
+from django.db.models import Case, DecimalField, F, Value, When
 from django.utils import timezone
 
 from .custody import rental_handovers
@@ -47,8 +48,7 @@ class Ledger:
             0 if rental.status == Rental.Status.CANCELLED else int(rental.total_vnd)
         )
         self.deposit_required = sum(
-            deposit * quantity
-            for deposit, quantity in rental.lines.values_list("deposit_vnd", "quantity")
+            line.deposit_vnd * line.quantity for line in rental.lines.all()
         )
         self.fees = sum(
             int(charge.amount_vnd) - self.waived[charge.pk]
@@ -127,6 +127,53 @@ def finance_summary(rental):
     return Ledger(
         rental, list(rental.finance_entries.all()), list(rental.finance_charges.all())
     ).summary()
+
+
+def receivables(rentals):
+    totals = {"balance_due_vnd": 0, "deposit_held_vnd": 0, "legacy_pending": 0}
+    for rental in rentals.prefetch_related(
+        "lines", "finance_entries", "finance_charges"
+    ).iterator(chunk_size=100):
+        ledger = Ledger(
+            rental,
+            list(rental.finance_entries.all()),
+            list(rental.finance_charges.all()),
+        )
+        totals["deposit_held_vnd"] += ledger.deposit_held
+        if ledger.legacy_pending:
+            totals["legacy_pending"] += 1
+        else:
+            totals["balance_due_vnd"] += max(0, ledger.balance)
+    return totals
+
+
+def period_movements(start, end):
+    def movement(increases, decreases=()):
+        return Case(
+            When(kind__in=increases, then=F("amount_vnd")),
+            When(kind__in=decreases, then=-F("amount_vnd")),
+            When(
+                kind=Kind.REVERSAL, reverses__kind__in=increases, then=-F("amount_vnd")
+            ),
+            When(
+                kind=Kind.REVERSAL, reverses__kind__in=decreases, then=F("amount_vnd")
+            ),
+            default=Value(0),
+            output_field=DecimalField(max_digits=26, decimal_places=0),
+        )
+
+    return (
+        FinanceEntry.objects.filter(recorded_at__gte=start, recorded_at__lt=end)
+        .annotate(
+            rent_net_vnd=movement(
+                (Kind.RENT_RECEIPT, Kind.DEPOSIT_APPLIED), (Kind.RENT_REFUND,)
+            ),
+            deposit_received_vnd=movement((Kind.DEPOSIT_RECEIPT,)),
+            deposit_refunded_vnd=movement((Kind.DEPOSIT_REFUND,)),
+        )
+        .select_related("recorded_by", "reverses")
+        .order_by("-recorded_at", "-pk")
+    )
 
 
 def finance_workspace(actor, rental_id):

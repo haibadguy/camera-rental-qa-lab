@@ -1,0 +1,142 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Báo cáo quản lý | Camera Rental{% endblock %}
+{% block content %}
+  <div class="page-heading"><h1>Báo cáo quản lý</h1></div>
+  <form method="get" class="panel report-period" aria-label="Kỳ báo cáo">
+    {{ form.non_field_errors }}
+    <div>{{ form.first.as_field_group }}</div>
+    <div>{{ form.last.as_field_group }}</div>
+    <button type="submit">Xem báo cáo</button>
+  </form>
+  {% if report %}
+    <section class="operation-section" aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Kết quả trong kỳ</h2>
+      <dl class="report-metrics">
+        <div class="panel"><dt>Tiền thuê và phí thực thu ròng</dt><dd>{{ report.money.rent_net_vnd|vnd }}</dd></div>
+        <div class="panel"><dt>Đơn có lịch nhận</dt><dd>{{ report.counts.active|add:report.counts.completed|add:report.counts.cancelled }}</dd></div>
+        <div class="panel"><dt>Thiết bị đang thuê hiện tại</dt><dd>{{ report.outstanding }}</dd></div>
+        <div class="panel">
+          <dt>Tỷ lệ sử dụng theo giờ</dt>
+          <dd>{% if report.usage.percent != None %}{{ report.usage.percent|floatformat:1 }}%{% else %}Thiếu dữ liệu{% endif %}</dd>
+        </div>
+      </dl>
+    </section>
+    <div class="order-layout">
+      <section class="panel order-panel" aria-labelledby="money-heading">
+        <h2 id="money-heading">Đối chiếu sổ tiền</h2>
+        <dl class="details order-details">
+          <div><dt>Cọc thu trong kỳ</dt><dd>{{ report.money.deposit_received_vnd|vnd }}</dd></div>
+          <div><dt>Cọc hoàn trong kỳ</dt><dd>{{ report.money.deposit_refunded_vnd|vnd }}</dd></div>
+          <div><dt>Cọc đang giữ của đơn có lịch nhận trong kỳ</dt><dd>{{ report.money.deposit_held_vnd|vnd }}</dd></div>
+          <div><dt>Còn phải thu của đơn có lịch nhận trong kỳ</dt><dd>{{ report.money.balance_due_vnd|vnd }}</dd></div>
+        </dl>
+        {% if report.money.legacy_pending %}<p class="muted">{{ report.money.legacy_pending }} đơn cũ chờ đối soát số phải thu.</p>{% endif %}
+        <a href="#cash">Xem giao dịch trong kỳ</a>
+      </section>
+      <section class="panel order-panel" aria-labelledby="order-count-heading">
+        <h2 id="order-count-heading">Đơn theo ngày nhận cam kết</h2>
+        <dl class="details order-details">
+          <div><dt>Còn hiệu lực</dt><dd>{{ report.counts.active }}</dd></div>
+          <div><dt>Hoàn tất</dt><dd>{{ report.counts.completed }}</dd></div>
+          <div><dt>Đã hủy</dt><dd>{{ report.counts.cancelled }}</dd></div>
+          <div><dt>Không đến nhận, trong nhóm hủy</dt><dd>{{ report.counts.no_show }}</dd></div>
+        </dl>
+        <a href="#orders">Xem đơn trong kỳ</a>
+      </section>
+    </div>
+    <section class="operation-section" aria-labelledby="stock-heading">
+      <div class="section-heading"><h2 id="stock-heading">Tồn tại thời điểm xem</h2><a href="{% url 'stocktakes' %}">Phiên kiểm kê</a></div>
+      <p class="muted">Ghi nhận lúc {{ report.generated_at|date:"d/m/Y H:i" }}</p>
+      <ul class="workspace-rows">
+        {% for item in report.stock %}
+          <li class="panel workspace-row">
+            <div><strong>{{ item.code }}</strong><p>{{ item.name }}</p></div>
+            <p>{{ item.available_now }} có sẵn · {{ item.outstanding }} đang thuê{% if not item.tracks_assets %} · Theo tồn tổng{% endif %}</p>
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Chưa có thiết bị.</li>
+        {% endfor %}
+      </ul>
+      {% if report.out_assets %}
+        <details class="panel order-panel operation-section">
+          <summary>Mã kho đang thuê</summary>
+          <ul>{% for hold in report.out_assets %}<li>{{ hold.asset.code }} · <a href="{% url 'management-audit' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a></li>{% endfor %}</ul>
+        </details>
+      {% endif %}
+    </section>
+    <section class="operation-section" aria-labelledby="usage-heading">
+      <h2 id="usage-heading">Mức sử dụng theo mã kho</h2>
+      <p>{{ report.usage.used_hours|floatformat:1 }} giờ thuê / {{ report.usage.available_hours|floatformat:1 }} giờ theo dõi</p>
+      {% if report.usage.incomplete %}<p class="muted">Một phần kỳ thiếu dữ liệu theo mã kho. Tỷ lệ dùng phần giờ đo được.</p>{% endif %}
+      <ul class="workspace-rows">
+        {% for row in areas %}
+          <li class="panel workspace-row">
+            <div>
+              <strong>{{ row.asset.code }} · {{ row.asset.equipment.name }}</strong>
+              <p class="muted">{{ row.from_at|date:"d/m/Y H:i" }} – {{ row.until_at|date:"d/m/Y H:i" }}</p>
+              {% if row.sources %}
+                <details><summary>Lượt giao nhận trong khoảng</summary>
+                  <ul>{% for rental_id, handover_id in row.sources %}<li><a href="{% url 'management-audit' rental_id %}#handover-{{ handover_id }}">Đơn #{{ rental_id }} · Lượt #{{ handover_id }}</a></li>{% endfor %}</ul>
+                </details>
+              {% endif %}
+            </div>
+            <p>{{ row.used_hours|floatformat:1 }} giờ thuê / {{ row.available_hours|floatformat:1 }} giờ theo dõi</p>
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Chưa có giờ theo dõi trong kỳ này.</li>
+        {% endfor %}
+      </ul>
+      {% if areas.has_other_pages %}
+        <nav class="actions" aria-label="Trang theo dõi thiết bị">
+          {% if areas.has_previous %}<a href="{% querystring usage_page=areas.previous_page_number %}#usage-heading">Trang trước</a>{% endif %}
+          <span>Trang {{ areas.number }} / {{ areas.paginator.num_pages }}</span>
+          {% if areas.has_next %}<a href="{% querystring usage_page=areas.next_page_number %}#usage-heading">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </section>
+    <section id="cash" class="operation-section" aria-labelledby="cash-heading">
+      <h2 id="cash-heading">Giao dịch trong kỳ</h2>
+      <ul class="workspace-rows">
+        {% for entry in entries %}
+          <li class="panel workspace-row">
+            <div>
+              <a href="{% url 'management-audit' entry.rental_id %}#entry-{{ entry.pk }}">Giao dịch #{{ entry.pk }} · {{ entry.get_kind_display }}</a>
+              <p class="muted">Đơn #{{ entry.rental_id }} · {{ entry.recorded_at|date:"d/m/Y H:i" }} · {{ entry.recorded_by.get_username }}</p>
+            </div>
+            <div><strong>{{ entry.amount_vnd|vnd }}</strong><p class="muted">Đóng góp vào thực thu ròng {{ entry.rent_net_vnd|vnd }}</p></div>
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Chưa có giao dịch trong kỳ này.</li>
+        {% endfor %}
+      </ul>
+      {% if entries.has_other_pages %}
+        <nav class="actions" aria-label="Trang giao dịch">
+          {% if entries.has_previous %}<a href="{% querystring cash_page=entries.previous_page_number %}#cash">Trang trước</a>{% endif %}
+          <span>Trang {{ entries.number }} / {{ entries.paginator.num_pages }}</span>
+          {% if entries.has_next %}<a href="{% querystring cash_page=entries.next_page_number %}#cash">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </section>
+    <section id="orders" class="operation-section" aria-labelledby="orders-heading">
+      <h2 id="orders-heading">Đơn trong kỳ</h2>
+      <ul class="workspace-rows">
+        {% for rental in orders %}
+          <li class="panel workspace-row">
+            <div><a href="{% url 'management-audit' rental.pk %}">Đơn #{{ rental.pk }}</a><p>{{ rental.customer.get_username }} · {{ rental.pickup_date|date:"d/m/Y" }}</p></div>
+            <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
+          </li>
+        {% empty %}
+          <li class="panel empty-state">Chưa có đơn nhận trong kỳ này.</li>
+        {% endfor %}
+      </ul>
+      {% if orders.has_other_pages %}
+        <nav class="actions" aria-label="Trang đơn thuê">
+          {% if orders.has_previous %}<a href="{% querystring order_page=orders.previous_page_number %}#orders">Trang trước</a>{% endif %}
+          <span>Trang {{ orders.number }} / {{ orders.paginator.num_pages }}</span>
+          {% if orders.has_next %}<a href="{% querystring order_page=orders.next_page_number %}#orders">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

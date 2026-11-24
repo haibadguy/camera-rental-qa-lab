@@ -1,5 +1,30 @@
 # Trạng thái xác minh Camera Rental
 
+## V2-M4/M5 · 24/11/2026
+
+**Pass local và bàn giao độc lập.** Runtime `1c8c2e745131821249e0b85f6042bd9d1eb72566` dựng từ archive Git. 29 tệp runtime và test thay đổi khớp SHA-256 giữa archive và container. Project `camera-v2-m45-review-104cd54f`, cổng 18055, volume mới. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Compose, Django và PostgreSQL | **Pass**, Verify exit 0. Cài mới `0001`–`0008`, seed, DB/web healthy, system check và migration drift đạt. **70/70 test** trong 47,695 giây. |
+| Tranh chấp | **Pass**, **7/7 test** chạy riêng trong 2,248 giây. Hai kết nối mở cùng phiên kiểm kê nhận `201` và `409`, DB có một ảnh chụp. Giữ các ca đồng thời về tồn, đổi lịch, bảo trì và sổ tiền. |
+| HTTP smoke | **Pass** cả ba nhóm. Đặt, giao nhận, thu/hoàn, chống ghi trùng, đổi kỳ và giữ hợp đồng API cũ. Lọc thương hiệu, mở phiên, ghi quan sát và kiểm quyền khách/nhân viên. |
+| Chrome headless | **Pass** tại 1440 × 1000, 390 × 844 và 320 × 780, đơn #6–#8 kỳ 24–25/11. Lọc thương hiệu, đặt hai thiết bị, thu tiền, mở kiểm kê khi đang thuê, nhận trả từng món và xử lý sự cố. Mỗi đơn ghi 240.000 ₫ tiền thuê, khấu trừ 45.000 ₫, hoàn 95.000 ₫ và tăng đúng 285.000 ₫ thực thu ròng. Quản lý chốt chênh lệch, truy ngược đến giao nhận, hồ sơ và khoản hoàn. Đã xem ảnh thực tế, kiểm gửi bộ lọc bằng bàn phím, không tràn ngang hoặc gặp lỗi JS/HTTP 5xx. |
+| Nâng dữ liệu demo | **Pass**. Khôi phục dump V2-M3 vào `camera_m45_upgrade_1bdf636c` rồi chạy `0008`. Số hàng và nội dung của 10 bảng nghiệp vụ cũ khớp sau khi bỏ các cột mới khỏi phép so sánh. Tám tài sản theo mã kho có mốc đo. Database nguồn được giữ. |
+| Khôi phục sau nghiệm thu | **Pass**. `pg_dump -Fc` và `pg_restore --exit-on-error` vào `camera_m45_restore_1bdf636c`, đối chiếu số hàng và nội dung 12 bảng. Bản sao đọc được báo cáo và các phiên đã chốt. System check và migration drift trên bản sao đạt. |
+| Bàn giao độc lập | **Pass**. Agent dùng archive đúng SHA và hướng dẫn repo, chạy Verify exit 0 trên `camera-v2-m45-handoff-621cff46`, cổng 18057. 70/70 test, cả ba nhóm smoke, Web/API báo cáo trả 200 sau khi cấp vai trò. Agent xác định đúng tổ chức code, test và tác động của bộ lọc báo cáo giả định. |
+| CI và pilot | **Not Run** đối với ứng viên tích hợp. CI chờ push được duyệt. Pilot và phát hành chờ quyết định riêng. |
+
+```powershell
+$env:COMPOSE_FILE = "compose.yaml;$env:TEMP\camera-v2-m45-network-55.yaml"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-v2-m45-review -Port 18055
+docker exec camera-v2-m45-review-104cd54f-web-1 python manage.py test catalog.tests.ConcurrentBookingTests catalog.test_schedule_changes.RentalChangeConcurrencyTests catalog.test_maintenance.ConcurrentMaintenanceTests catalog.test_finance.FinanceConcurrencyTests catalog.test_management.StocktakeConcurrencyTests --verbosity 2
+```
+
+Override IPAM dùng subnet trống `10.250.55.0/24`. Bàn giao dùng subnet riêng `10.250.57.0/24`. Ảnh, script Chrome và script diễn tập có trong thư mục tạm `camera-v2-m4-m5-browser-review`. Volume hiện hữu được giữ.
+
+Lượt tích hợp trước ứng viên có health check chậm và lỗi tên cột tổng trùng cột chi tiết. Web tự hồi phục và truy vấn đã sửa. Lượt Chrome đầu của ứng viên chạy chồng với smoke, nên phải chạy lại tuần tự với mã kho demo riêng. Lượt cuối đạt trên cùng SHA runtime.
+
 ## V2-M3 · 24/11/2026
 
 **Pass local.** Runtime `be0a617693e636eaecbc8a9f2b3fc7cd757f1b4c` được dựng từ `git archive` trên Compose project `camera-v2-m3-review-cda42501`, cổng 18052, volume mới. SHA-256 của 28 tệp runtime và test thay đổi khớp giữa archive và container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19.
@@ -11,7 +36,6 @@
 | Tranh chấp PostgreSQL | **Pass**, 6/6 chạy riêng trong 2,019 giây. Cùng mã ghi thu đồng thời tạo một bút toán. Hai yêu cầu hoàn khác mã cạnh tranh cùng số dư nhận `201` và `409`. Các ca đồng thời về tồn và lịch tiếp tục đạt. |
 | HTTP smoke | **Pass**. API từ chối giao khi thiếu tiền, từ chối khách ghi sổ, trả cùng ID khi gửi lại và đối chiếu khoản hoàn sau hủy. Duy trì luồng đặt nhiều SKU, đổi kỳ, giao nhận, kiểm tra và lịch kho. |
 | Chrome headless | **Pass** tại 1440 × 1000, 390 × 844 và 320 × 780. Dùng các SKU `FINUI-1440`, `FINUI-390`, `FINUI-320` trên DB kiểm thử, đơn #5–#7 kỳ 24–25/11. Quản lý cấu hình cọc 70.000 ₫. Nhân viên thu 120.000 ₫ tiền thuê và 70.000 ₫ tiền cọc, bàn giao và nhận trả. Quản lý duyệt phí 45.000 ₫, đóng sự cố và khấu trừ. Nhân viên hoàn 25.000 ₫. Khách thấy số tiền hoàn trên đơn. Đã xem ảnh, kiểm thứ tự Tab cho form thu và xác nhận luồng không tràn ngang, lỗi JS hoặc HTTP 5xx. |
-| GitHub Actions | **Not Run** cho V2-M3. Ứng viên local chờ duyệt push. |
 
 Chạy từ archive của SHA trên. Override IPAM tạm nằm ngoài repo dùng subnet `10.250.52.0/24`. Các volume cũ được giữ.
 
@@ -22,6 +46,11 @@ docker exec camera-v2-m3-review-cda42501-web-1 python manage.py test catalog.tes
 ```
 
 Script Chrome và fixture nằm trong thư mục tạm `camera-v2-m3-browser-review`, chạy với `CAMERA_M3_URL=http://127.0.0.1:18052` và `CAMERA_M3_PLAYWRIGHT` trỏ đến Playwright Core. Ca kiểm thử hồi quy bàn giao ban đầu thiếu bước thu tiền cho đơn mới. Fixture đã được cập nhật để đi qua sổ chung và các khẳng định về tồn kho được giữ.
+
+### CI V2-M3 trên GitHub
+
+- **Nhánh tính năng · Pass.** Run push trên `feature/v2-m3` đạt tại `43d81465dc58ffa68d8d0f211af32117c644826a`. [GitHub Actions](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45273030183)
+- **Sau merge · Pass.** PR #7 vào `main` ngày 24/11/2026 tại `71488107305dd5968b005c2564b77032f8cbf27c`. Run push trên cùng SHA kết thúc với `success`. [PR #7](https://github.com/haibadguy/camera-rental-qa-lab/pull/7) · [GitHub Actions trên main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45273559850)
 
 ## V2-M2 · 24/11/2026
 

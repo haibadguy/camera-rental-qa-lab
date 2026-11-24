@@ -69,4 +69,20 @@ Hải đã duyệt năm chính sách dưới đây ngày 23/11/2026. Các chính
 - Gửi lại cùng một thao tác chỉ ghi một giao dịch. Các thao tác đồng thời kiểm tra và cập nhật số dư nguyên tử. Số hoàn hoặc khấu trừ bị chặn nếu vượt khoản tương ứng đang giữ.
 - Kiểm luồng thu đủ rồi giao, gia hạn có chênh lệch, hoàn cọc sau trả đủ, xử lý sự cố có khấu trừ, hủy trước giao có tiền đã thu, và nâng dữ liệu đơn cũ. Sổ tiền truy ngược được số tiền, người thao tác, thời điểm, lý do và giao dịch gốc.
 
-**Trước V2-M4**, chốt định nghĩa doanh thu, tỷ lệ sử dụng và cách xử lý chênh lệch kiểm kê. **Trước V2-M5**, chốt cửa hàng pilot, dữ liệu được phép dùng, phương án chuyển dữ liệu và hợp đồng API cũ. [Điều kiện phát hành](../ROADMAP.md#roadmap-v20)
+## Quyết định trước V2-M4
+
+**Hải duyệt ngày 24/11/2026.** Báo cáo dùng ngày Việt Nam và khoảng từ đầu ngày đầu đến đầu ngày sau ngày cuối của bộ lọc. Mỗi số liệu truy được về bản ghi nguồn.
+
+| Quyết định | Chính sách đã duyệt |
+| --- | --- |
+| **1. Tiền thuê và phí thực thu ròng** | Theo ngày ghi sổ, lấy tiền thuê và phí đã thu trừ tiền thuê và phí đã hoàn, cộng cọc đã khấu trừ để thanh toán khoản phí duyệt. Giao dịch đảo điều chỉnh dấu của giao dịch gốc tại kỳ ghi đảo. Tiền cọc còn giữ, tiền cọc đã hoàn và số dư chưa thu theo dõi riêng. |
+| **2. Đơn thuê và tình trạng kho** | Đếm đơn theo ngày nhận cam kết hiện hành. Nhóm còn hiệu lực gồm `CONFIRMED` và `PICKED_UP`, nhóm hoàn tất gồm `RETURNED` và `CLOSED`, nhóm hủy gồm `CANCELLED` với số `NO_SHOW` tách riêng. Chỉ số thiết bị đang thuê dùng trạng thái giao nhận thực tế tại thời điểm xem. Số serial và mã kho chỉ xuất hiện ở màn có quyền nội bộ. |
+| **3. Tỷ lệ sử dụng** | Số giờ thiết bị thực tế ở ngoài kho do thuê chia cho tổng số giờ các mã kho thuộc đội cho thuê trong cùng kỳ. Kết thúc giờ thuê lúc nhận về hoặc xác nhận mất. Tính thời gian cách ly trong mẫu số, dừng tính sau khi thiết bị ngừng sử dụng. Với mã kho cũ, bắt đầu đo từ thời điểm V2-M4 ghi nhận mốc theo dõi. Báo thiếu dữ liệu cho khoảng trước mốc, tồn tổng v1 và các khoảng bàn giao nguyên đơn thiếu thời điểm giao nhận theo mã kho. |
+| **4. Kiểm kê và xử lý chênh lệch** | Chụp danh sách mã kho và tình trạng kỳ vọng lúc mở phiên. Nhân viên ghi kết quả đối chiếu và các giao nhận phát sinh sau mốc. Quản lý chốt từng chênh lệch với lý do và người xử lý. Kết quả kiểm kê là lịch sử đối soát. Việc nhập lại kho, cách ly hoặc ngừng sử dụng tiếp tục qua luồng vận hành có kiểm quyền. |
+| **5. Thương hiệu, quyền và truy vết** | Thương hiệu là trường tùy chọn do nhân viên có quyền sửa danh mục cập nhật. Dữ liệu cũ để trống cho đến khi được xác nhận. Nhân viên được phân công ghi kiểm kê. Quản lý có quyền riêng để chốt chênh lệch và xem báo cáo, gồm đường dẫn đến đơn, giao nhận, bảo trì và bút toán đã duyệt. |
+
+## Quyết định trước V2-M5
+
+**Hải duyệt phạm vi kỹ thuật ngày 24/11/2026.** V2-M4 và phần hoàn thiện kỹ thuật V2-M5 dùng một ứng viên. Dùng dữ liệu demo hoặc tổng hợp để chạy luồng khách, nhân viên, quản lý, gồm trả từng phần và sự cố. Giữ tương thích API hiện có. Diễn tập nâng và khôi phục trên PostgreSQL biệt lập, kiểm desktop/mobile và chạy CI trên đúng SHA dùng để review.
+
+Trước pilot hoặc phát hành, Hải duyệt cửa hàng pilot, dữ liệu được phép dùng, phương án chuyển dữ liệu và mọi thay đổi hợp đồng API. [Điều kiện phát hành](../ROADMAP.md#roadmap-v20)

@@ -12,6 +12,7 @@ class Equipment(models.Model):
 
     code = models.CharField(max_length=32, unique=True)
     name = models.CharField(max_length=160)
+    brand = models.CharField("Thương hiệu", max_length=80, blank=True)
     daily_rate_vnd = models.PositiveIntegerField()
     deposit_vnd = models.PositiveIntegerField(default=0)
     total_stock = models.PositiveIntegerField()
@@ -81,6 +82,11 @@ class Rental(models.Model):
             ("manage_rental_incidents", "Can resolve rental incidents"),
             ("record_rental_finance", "Can record rental receipts and refunds"),
             ("manage_rental_finance", "Can approve rental finance decisions"),
+            ("count_rental_stock", "Can record stocktakes"),
+            (
+                "manage_rental_reporting",
+                "Can view management reports and close stocktakes",
+            ),
         ]
         indexes = [
             models.Index(
@@ -163,6 +169,7 @@ class AssetUnit(models.Model):
     )
     code = models.CharField("Mã kho", max_length=48, unique=True)
     serial = models.CharField("Serial hãng", max_length=100, blank=True)
+    reporting_since = models.DateTimeField(null=True, editable=False)
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.READY
     )
@@ -560,5 +567,105 @@ class FinanceEntry(models.Model):
                     & models.Q(method="")
                 ),
                 name="finance_entry_method_valid",
+            ),
+        ]
+
+
+class Stocktake(models.Model):
+    equipment = models.ForeignKey(
+        Equipment, on_delete=models.PROTECT, related_name="stocktakes"
+    )
+    opened_at = models.DateTimeField(auto_now_add=True)
+    opened_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    closed_at = models.DateTimeField(null=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["equipment"],
+                condition=models.Q(closed_at__isnull=True),
+                name="stocktake_one_open_per_equipment",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(closed_at__isnull=True, closed_by__isnull=True)
+                | models.Q(closed_at__isnull=False, closed_by__isnull=False),
+                name="stocktake_close_actor",
+            ),
+        ]
+
+
+class StocktakeLine(models.Model):
+    class Condition(models.TextChoices):
+        READY = "READY", "Có sẵn trong kho"
+        OUT = "OUT", "Đang thuê"
+        INSPECTION = "INSPECTION", "Chờ kiểm tra"
+        QUARANTINED = "QUARANTINED", "Cách ly"
+        RETIRED = "RETIRED", "Ngừng sử dụng"
+        MISSING = "MISSING", "Không thấy"
+        UNEXPECTED = "UNEXPECTED", "Ngoài danh sách kỳ vọng"
+
+    stocktake = models.ForeignKey(
+        Stocktake, on_delete=models.PROTECT, related_name="lines"
+    )
+    asset = models.ForeignKey(AssetUnit, on_delete=models.PROTECT, null=True)
+    code = models.CharField(max_length=48)
+    expected = models.CharField(max_length=16, choices=Condition.choices)
+    observed = models.CharField(max_length=16, choices=Condition.choices, blank=True)
+    notes = models.TextField(max_length=2000, blank=True)
+    movement = models.ForeignKey(AssetHandover, on_delete=models.PROTECT, null=True)
+    counted_at = models.DateTimeField(null=True)
+    counted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name="+"
+    )
+    resolved_at = models.DateTimeField(null=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name="+"
+    )
+    resolution_note = models.TextField(max_length=2000, blank=True)
+
+    class Meta:
+        ordering = ["code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["stocktake", "code"], name="stocktake_line_code_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(expected="UNEXPECTED", asset__isnull=True)
+                | models.Q(
+                    expected__in=[
+                        "READY",
+                        "OUT",
+                        "INSPECTION",
+                        "QUARANTINED",
+                        "RETIRED",
+                    ],
+                    asset__isnull=False,
+                ),
+                name="stocktake_line_expected_source",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    observed="", counted_at__isnull=True, counted_by__isnull=True
+                )
+                | (
+                    ~models.Q(observed="")
+                    & models.Q(counted_at__isnull=False, counted_by__isnull=False)
+                ),
+                name="stocktake_line_count_actor",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(resolved_at__isnull=True, resolved_by__isnull=True)
+                | models.Q(
+                    resolved_at__isnull=False,
+                    resolved_by__isnull=False,
+                    counted_at__isnull=False,
+                ),
+                name="stocktake_line_resolution_actor",
             ),
         ]

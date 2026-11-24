@@ -7,7 +7,7 @@ from .inventory import minimum_stock, unassigned_legacy_rentals
 from .models import AssetUnit, Equipment
 
 
-def catalog_items(*, search="", kind=""):
+def catalog_items(*, search="", kind="", brand=""):
     equipment = Equipment.objects.filter(is_active=True)
     if search:
         equipment = equipment.filter(
@@ -15,7 +15,19 @@ def catalog_items(*, search="", kind=""):
         )
     if kind:
         equipment = equipment.filter(kind=kind)
+    if brand:
+        equipment = equipment.filter(brand__iexact=brand.strip())
     return equipment
+
+
+def catalog_brands():
+    return (
+        catalog_items()
+        .exclude(brand="")
+        .order_by("brand")
+        .values_list("brand", flat=True)
+        .distinct()
+    )
 
 
 @transaction.atomic
@@ -27,6 +39,7 @@ def create_equipment(
     total_stock,
     *,
     kind=Equipment.Kind.CAMERA,
+    brand="",
     specifications="",
     accessory_checklist="",
     is_active=True,
@@ -40,6 +53,7 @@ def create_equipment(
             "daily_rate_vnd": daily_rate_vnd,
             "total_stock": total_stock,
             "kind": kind,
+            "brand": _brand(brand),
             "specifications": specifications,
             "accessory_checklist": accessory_checklist,
             "is_active": is_active,
@@ -59,6 +73,7 @@ def update_equipment(
     total_stock,
     *,
     kind=None,
+    brand=None,
     specifications=None,
     accessory_checklist=None,
     is_active=None,
@@ -79,6 +94,7 @@ def update_equipment(
     equipment.total_stock = total_stock
     changes = {
         "kind": kind,
+        "brand": _brand(brand) if brand is not None else None,
         "specifications": specifications,
         "accessory_checklist": accessory_checklist,
         "is_active": is_active,
@@ -92,6 +108,15 @@ def update_equipment(
     return equipment
 
 
+def _brand(value):
+    if (
+        not isinstance(value, str)
+        or len(value.strip()) > Equipment._meta.get_field("brand").max_length
+    ):
+        raise RentalError("Thương hiệu không hợp lệ.")
+    return value.strip()
+
+
 @transaction.atomic
 def register_asset(staff, equipment_id, code, serial=""):
     if not staff.is_staff:
@@ -101,7 +126,12 @@ def register_asset(staff, equipment_id, code, serial=""):
         raise RentalError("Mã kho hoặc serial không hợp lệ.")
     equipment = Equipment.objects.select_for_update().get(pk=equipment_id)
     asset, created = AssetUnit.objects.get_or_create(
-        code=code, defaults={"equipment": equipment, "serial": serial}
+        code=code,
+        defaults={
+            "equipment": equipment,
+            "serial": serial,
+            "reporting_since": timezone.now() if equipment.tracks_assets else None,
+        },
     )
     if not created:
         raise RentalError("Mã kho đã được sử dụng.", 409)
@@ -124,4 +154,7 @@ def enable_asset_tracking(staff, equipment_id):
         raise RentalError("Số thiết bị đã đăng ký phải khớp tổng tồn v1.", 409)
     equipment.tracks_assets = True
     equipment.save(update_fields=["tracks_assets"])
+    equipment.assets.filter(reporting_since__isnull=True).update(
+        reporting_since=timezone.now()
+    )
     return equipment
