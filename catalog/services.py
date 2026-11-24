@@ -1,5 +1,7 @@
 """Shared business entry points for the web and API."""
 
+from .cash_shifts import cash_shift_detail, close_shift, open_shift, shift_history, submit_shift
+from .counter import MAX_SCAN_CODES, book_for_customer, scan_assets
 from .custody import prepare_asset, receipt_summary, receive_asset, rental_handovers
 from .equipment import (
     catalog_brands,
@@ -18,6 +20,7 @@ from .finance import (
     review_finance_charge,
     set_equipment_deposit,
 )
+from .incident_photos import PHOTO_KINDS, attach_photo, open_photo
 from .inventory import (
     MAX_RENTAL_DAYS,
     asset_calendar,
@@ -56,8 +59,9 @@ from .rentals import (
     return_rental,
     staff_rentals,
 )
-from .reporting import rental_audit, rental_report
+from .reporting import rental_audit, rental_report, report_detail
 from .roles import (
+    can_book_for_customer,
     can_count_stock,
     can_manage,
     can_manage_finance,
@@ -84,13 +88,19 @@ from .stocktake import (
 __all__ = [
     "MAX_RENTAL_DAYS",
     "MAX_RENTAL_QUANTITY",
+    "MAX_SCAN_CODES",
     "MIN_RENTAL_QUANTITY",
     "OBSERVATIONS",
+    "PHOTO_KINDS",
+    "attach_photo",
+    "open_photo",
     "RentalError",
     "StaffRentalQueue",
     "asset_calendar",
     "available_stock",
+    "book_for_customer",
     "book_order",
+    "can_book_for_customer",
     "book_rental",
     "can_cancel",
     "can_count_stock",
@@ -109,6 +119,8 @@ __all__ = [
     "catalog_items",
     "change_kind",
     "checked_out_quantity",
+    "cash_shift_detail",
+    "close_shift",
     "close_stocktake",
     "create_equipment",
     "customer_rentals",
@@ -119,6 +131,7 @@ __all__ = [
     "inspect_asset",
     "maintenance_cases",
     "mark_no_show",
+    "open_shift",
     "open_stocktake",
     "ops_rentals",
     "pick_up_rental",
@@ -135,6 +148,7 @@ __all__ = [
     "rental_audit",
     "rental_handovers",
     "rental_report",
+    "report_detail",
     "replace_reserved_asset",
     "report_incident",
     "request_rental_change",
@@ -144,10 +158,13 @@ __all__ = [
     "review_finance_charge",
     "review_rental_change",
     "set_equipment_deposit",
+    "scan_assets",
     "staff_rentals",
     "start_repair",
     "stocktake_detail",
     "stocktake_history",
+    "shift_history",
+    "submit_shift",
     "unassigned_legacy_rentals",
     "update_equipment",
     "validate_period",

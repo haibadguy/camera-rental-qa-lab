@@ -152,3 +152,17 @@ Adapter vận hành, quyết toán và quản lý tách theo luồng người d�
 
 - Giữ URL, hợp đồng phản hồi và migration đã áp dụng. Mỗi ứng viên cần kiểm system check, migration drift, cài mới và nâng dữ liệu trên PostgreSQL biệt lập.
 - Dùng kết nối PostgreSQL độc lập để kiểm đặt đồng thời, bàn giao, đổi kỳ và bảo trì. Mở các màn thay đổi trên desktop và mobile, và chạy smoke Web/API. [Quy trình Verify](setup.md#kiểm-tra-và-dựng-dữ-liệu-sạch)
+
+
+## V3 · Danh mục lớn và vận hành quầy
+
+| Hợp đồng mới | Dữ liệu và quyền |
+| --- | --- |
+| `GET /api/v3/catalog/` | Bộ lọc v2, cặp ngày tùy chọn, `page`, `page_size` từ 1–60, mặc định 24. Trả `count`, `page`, `page_size`, `next_page` và `results`. Tính lịch cho SKU trong trang. |
+| `GET /api/v3/management/reports/summary/` | `first`, `last` theo ngày Việt Nam, tối đa 366 ngày. Trả số liệu và thời điểm tính. Quyền báo cáo hiện có. Chi tiết phân trang tại `/api/v3/management/reports/{section}/` với `orders`, `entries`, `stock`, `out_assets`, `usage`. |
+| `POST /api/v3/operations/orders/` | Thêm `username` của tài khoản khách đang hoạt động và UUID `command_id` vào dữ liệu đặt nhiều SKU. Trả 201 và đơn. Cần quyền vận hành và quyền tạo hộ. |
+| `POST /api/v3/operations/orders/{id}/scan/` | `command_id`, `action` là `PREPARE` hoặc `RECEIVE`, `codes` chứa 1–30 mã đang giữ cho đơn. Trả 204. Cả lô rollback khi một mã thất bại. |
+| Ca thu ngân | Web tại `/staff/cash-shifts/`. Thu, hoàn và đảo tiền qua API v2 cùng đi qua dịch vụ quyết toán. Đã nộp ca thì số liệu kỳ vọng được ghi lại. Chỉ quản lý tài chính chốt ca. |
+| Ảnh sự cố | Tải từ hồ sơ vận hành. JPG lưu riêng tư sau khi chuẩn hóa và bỏ EXIF. Route đọc luôn xác thực quyền và thời hạn. Worker xóa nội dung sau 90 ngày, giữ bản ghi audit. |
+
+Số dư tổng hợp theo đơn được tạo từ `Ledger`, trong cùng giao dịch khi đặt, hủy, đổi tổng tiền, duyệt phí hoặc ghi sổ. Với đơn chưa backfill, dùng phép tính `Ledger` khi đọc. Công việc tài chính khóa `Rental` trước ca. Nộp và đóng ca chỉ khóa hàng ca. Quét mã ảnh hưởng tồn dùng thứ tự `Equipment` trước `Rental`. Sổ tiền tiếp tục là nguồn dữ liệu cho khoản thu thực tế.

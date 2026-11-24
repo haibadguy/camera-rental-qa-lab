@@ -2,11 +2,15 @@
 {% load pricing %}
 {% block title %}Đặt nhiều thiết bị | Camera Rental{% endblock %}
 {% block content %}
-  <div class="page-heading"><h1>Đặt nhiều thiết bị</h1></div>
-  {% if form.products %}
+  <div class="page-heading"><h1>{% if counter %}Tạo đơn tại quầy{% else %}Đặt nhiều thiết bị{% endif %}</h1></div>
+  {% if form.products or search %}
     <form method="post" class="panel order-panel multi-order">
       {% csrf_token %}
       {{ form.non_field_errors }}
+      {% if counter %}
+        {{ form.username.as_field_group }}{{ form.command_id }}{{ form.command_id.errors }}
+      {% endif %}
+      <input type="hidden" name="page" value="{{ page.number }}">
       <fieldset>
         <legend>Kỳ thuê chung</legend>
         <div class="multi-order-dates">
@@ -16,6 +20,11 @@
       </fieldset>
       <fieldset>
         <legend>Thiết bị</legend>
+        <div class="actions">
+          <label for="order-search">Tên hoặc mã thiết bị</label>
+          <input id="order-search" type="search" name="search" maxlength="100" value="{{ search }}">
+          <button type="submit" name="browse" value="1" formnovalidate>Tìm thiết bị</button>
+        </div>
         <p class="muted">Nhập số lượng cho các mẫu cần thuê. Giá theo ngày hiển thị bên dưới.</p>
         <ul class="workspace-rows">
           {% for item, field in form.products %}
@@ -30,6 +39,13 @@
             </li>
           {% endfor %}
         </ul>
+        {% if page.has_other_pages %}
+          <nav class="actions" aria-label="Trang tìm thiết bị">
+            {% if page.has_previous %}<button name="browse" value="{{ page.previous_page_number }}" formnovalidate>Trang trước</button>{% endif %}
+            <span>Trang {{ page.number }} / {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}<button name="browse" value="{{ page.next_page_number }}" formnovalidate>Trang sau</button>{% endif %}
+          </nav>
+        {% endif %}
       </fieldset>
       {% include "catalog/handoff_info.html" %}
       <div class="actions"><button type="submit">Xác nhận đặt thuê</button></div>

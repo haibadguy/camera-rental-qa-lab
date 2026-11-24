@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from .custody import confirm_asset_pickup, lock_rental
 from .errors import RentalError
-from .finance import require_payment_before_pickup
+from .finance import refresh_snapshot, require_payment_before_pickup
 from .inventory import (
     available_stock,
     checked_out_quantity,
@@ -137,6 +137,7 @@ def book_order(customer, pickup_date, return_date, lines, *, require_assets=True
             for asset_id in assignments.get(line.equipment_id, ())
         ]
     )
+    refresh_snapshot(rental)
     return rental
 
 
@@ -181,6 +182,7 @@ def cancel_rental(customer, rental_id, *, legacy_only=False):
         raise RentalError("Chỉ hủy được đơn đã đặt trước ngày nhận.", 409)
     rental.status = Rental.Status.CANCELLED
     rental.save(update_fields=["status"])
+    refresh_snapshot(rental)
     _release_reservations(rental)
     return rental
 
@@ -222,6 +224,7 @@ def mark_no_show(staff, rental_id, *, legacy_only=False):
     rental.status = Rental.Status.CANCELLED
     rental.cancellation_reason = Rental.CancellationReason.NO_SHOW
     rental.save(update_fields=["status", "cancellation_reason"])
+    refresh_snapshot(rental)
     _release_reservations(rental)
     return rental
 

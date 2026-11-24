@@ -3,6 +3,7 @@ from django.urls import path
 
 from catalog import (
     api,
+    cash_shift_web,
     finance_api,
     finance_web,
     management_api,
@@ -10,9 +11,19 @@ from catalog import (
     operations_api,
     operations_web,
     views,
+    v3_api,
 )
 
 urlpatterns = [
+    path("api/v3/catalog/", v3_api.catalog, name="api-catalog-v3"),
+    path("api/v3/management/reports/summary/", v3_api.summary, name="api-reports-summary-v3"),
+    path("api/v3/management/reports/<str:section>/", v3_api.report_detail, name="api-report-detail-v3"),
+    path("api/v3/operations/orders/", v3_api.counter_order, name="api-counter-orders"),
+    path("api/v3/operations/orders/<int:rental_id>/scan/", v3_api.scan, name="api-counter-scan"),
+    path("staff/operations/order/new/", views.counter_book_order, name="counter-book-order"),
+    path("staff/maintenance/<int:case_id>/photos/<int:photo_id>/", operations_web.incident_photo, name="incident-photo"),
+    path("staff/cash-shifts/", cash_shift_web.shifts, name="cash-shifts"),
+    path("staff/cash-shifts/<int:shift_id>/", cash_shift_web.shift_detail, name="cash-shift-detail"),
     path("manager/reports/", management_web.reports, name="management-reports"),
     path(
         "manager/reports/rentals/<int:rental_id>/",

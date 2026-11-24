@@ -6,6 +6,8 @@ FINANCE_CLERK_GROUP = "Rental Finance Clerks"
 FINANCE_MANAGER_GROUP = "Rental Finance Managers"
 STOCK_COUNTER_GROUP = "Rental Stock Counters"
 REPORTING_MANAGER_GROUP = "Rental Reporting Managers"
+COUNTER_BOOKER_GROUP = "Rental Counter Bookers"
+BOOK_FOR_CUSTOMER = "book_for_customer"
 OPERATE = "operate_rentals"
 MANAGE = "manage_rental_incidents"
 RECORD_FINANCE = "record_rental_finance"
@@ -15,6 +17,7 @@ MANAGE_REPORTING = "manage_rental_reporting"
 
 ROLE_GROUPS = {
     "operator": OPERATOR_GROUP,
+    "counter-booker": COUNTER_BOOKER_GROUP,
     "manager": MANAGER_GROUP,
     "finance-clerk": FINANCE_CLERK_GROUP,
     "finance-manager": FINANCE_MANAGER_GROUP,
@@ -23,6 +26,7 @@ ROLE_GROUPS = {
 }
 
 ROLE_FAMILIES = (
+    (COUNTER_BOOKER_GROUP,),
     (OPERATOR_GROUP, MANAGER_GROUP),
     (FINANCE_CLERK_GROUP, FINANCE_MANAGER_GROUP),
     (STOCK_COUNTER_GROUP, REPORTING_MANAGER_GROUP),
@@ -31,6 +35,10 @@ ROLE_FAMILIES = (
 
 def can_operate(user):
     return user.is_authenticated and user.has_perm(f"catalog.{OPERATE}")
+
+
+def can_book_for_customer(user):
+    return can_operate(user) and user.has_perm(f"catalog.{BOOK_FOR_CUSTOMER}")
 
 
 def can_manage(user):
@@ -61,6 +69,7 @@ def create_operation_groups(sender, using, **kwargs):
             content_type__model="rental",
             codename__in=(
                 OPERATE,
+                BOOK_FOR_CUSTOMER,
                 MANAGE,
                 RECORD_FINANCE,
                 MANAGE_FINANCE,
@@ -72,6 +81,7 @@ def create_operation_groups(sender, using, **kwargs):
     groups = Group.objects.using(using)
     for group_name, codenames in (
         (OPERATOR_GROUP, (OPERATE,)),
+        (COUNTER_BOOKER_GROUP, (BOOK_FOR_CUSTOMER,)),
         (MANAGER_GROUP, (OPERATE, MANAGE)),
         (FINANCE_CLERK_GROUP, (RECORD_FINANCE,)),
         (FINANCE_MANAGER_GROUP, (RECORD_FINANCE, MANAGE_FINANCE)),

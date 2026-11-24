@@ -22,6 +22,7 @@ from .forms import (
     AssetForm,
     BookingForm,
     CatalogFilterForm,
+    CounterOrderForm,
     EquipmentForm,
     OrderForm,
     PeriodForm,
@@ -78,6 +79,8 @@ def equipment_list(request):
         kind=filters.get("kind", ""),
         brand=filters.get("brand", ""),
     )
+    page = Paginator(equipment.order_by("name", "pk"), 24).get_page(request.GET.get("page"))
+    equipment = list(page.object_list)
     if filters_are_valid:
         pickup, dropoff = filters["pickup_date"], filters["return_date"]
         if pickup and dropoff:
@@ -95,7 +98,7 @@ def equipment_list(request):
     return render(
         request,
         "catalog/equipment_list.html",
-        {"equipment": equipment, "form": form, "brands": services.catalog_brands()},
+        {"equipment": equipment, "form": form, "brands": services.catalog_brands(), "page": page},
     )
 
 
@@ -171,10 +174,11 @@ def my_rentals(request):
     rentals = services.customer_rentals(request.user).prefetch_related(
         "lines__equipment"
     )
+    page = Paginator(rentals, 24).get_page(request.GET.get("page"))
     return render(
         request,
         "catalog/rental_list.html",
-        {"rentals": rentals, "title": "Đơn thuê của tôi"},
+        {"rentals": page, "page": page, "title": "Đơn thuê của tôi"},
     )
 
 
@@ -225,47 +229,107 @@ def _rental_detail(request, rental, *, staff=False, error=None):
 @login_required
 @require_http_methods(["GET", "POST"])
 def book_order(request):
-    equipment = list(services.catalog_items().filter(tracks_assets=True))
-    initial = {
+    return _order_form(request)
+
+
+def _quantity_id(key):
+    prefix = "quantity_"
+    value = key[len(prefix):]
+    if key.startswith(prefix) and value.isascii() and value.isdecimal() and len(value) <= 19:
+        pk = int(value)
+        if 0 < pk <= 9_223_372_036_854_775_807:
+            return pk
+    return None
+
+
+def _order_form(request, *, counter=False):
+    session_key = "counter_cart" if counter else "rental_cart"
+    saved = request.session.get(session_key, {})
+    initial = saved | {
         key: request.GET[key] for key in PeriodForm.base_fields if key in request.GET
     }
-    for item in equipment:
-        if request.GET.get("equipment") == str(item.pk):
-            initial[f"quantity_{item.pk}"] = 1
-    form = OrderForm(
-        request.POST if request.method == "POST" else None,
-        equipment=equipment,
-        initial=initial,
-    )
+    requested = _quantity_id(f"quantity_{request.GET.get('equipment', '')}")
+    if requested:
+        initial.setdefault(f"quantity_{requested}", 1)
+    data = request.POST if request.method == "POST" else None
+    search = (request.POST.get("search", "") if data else request.GET.get("search", ""))[:100]
+    catalog = services.catalog_items(search=search).filter(tracks_assets=True).order_by("name", "pk")
+    page = Paginator(catalog, 24).get_page(request.POST.get("page") if data else request.GET.get("page"))
+    equipment = {item.pk: item for item in page}
+    for key in (*initial, *(data or {})):
+        pk = _quantity_id(key)
+        if pk and pk not in equipment:
+            equipment[pk] = None
+    missing = [pk for pk, item in equipment.items() if item is None]
+    equipment.update(services.catalog_items().filter(tracks_assets=True).in_bulk(missing))
+    equipment = [item for item in equipment.values() if item is not None]
+
+    form_class = CounterOrderForm if counter else OrderForm
+    if data and "browse" in data:
+        draft = {}
+        for key in PeriodForm.base_fields:
+            draft[key] = data.get(key, "")[:10]
+        if counter:
+            draft["username"] = data.get("username", "")[:150]
+            draft["command_id"] = data.get("command_id", "")[:36]
+        for item in equipment:
+            key = f"quantity_{item.pk}"
+            value = data.get(key, "")
+            if value.isascii() and value.isdecimal() and len(value) <= 10 and 0 < int(value) <= services.MAX_RENTAL_QUANTITY:
+                draft[key] = int(value)
+        request.session[session_key] = draft
+        return redirect(reverse(request.resolver_match.url_name, query={
+            "search": search, "page": data.get("browse") or 1,
+        }))
+
+    form = form_class(data, equipment=equipment, initial=initial)
     status = 200
-    if request.method == "POST":
+    if data is not None:
         status = 400
         if form.is_valid():
             try:
-                rental = services.book_order(
-                    request.user,
-                    form.cleaned_data["pickup_date"],
-                    form.cleaned_data["return_date"],
-                    form.cleaned_data["lines"],
-                )
+                values = {
+                    name: form.cleaned_data[name] for name in ("pickup_date", "return_date", "lines")
+                }
+                if counter:
+                    rental = services.book_for_customer(
+                        request.user, **values, username=form.cleaned_data["username"],
+                        command_id=form.cleaned_data["command_id"],
+                    )
+                else:
+                    rental = services.book_order(request.user, **values)
             except Equipment.DoesNotExist:
                 form.add_error(None, "Danh mục đã thay đổi. Chọn lại thiết bị.")
                 status = 409
             except services.RentalError as error:
+                if error.status == 403:
+                    raise PermissionDenied from error
                 form.add_error(None, str(error))
                 status = error.status
             else:
+                request.session.pop(session_key, None)
                 messages.success(request, "Đặt thuê thành công.")
-                return redirect("rental-detail", rental_id=rental.pk)
+                return redirect("operations-order" if counter else "rental-detail", rental_id=rental.pk)
     return render(
         request,
         "catalog/book_order.html",
         {
             "form": form,
             "rental_store": settings.RENTAL_STORE,
+            "counter": counter,
+            "search": search,
+            "page": page,
         },
         status=status,
     )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def counter_book_order(request):
+    if not services.can_book_for_customer(request.user):
+        raise PermissionDenied
+    return _order_form(request, counter=True)
 
 
 @login_required
@@ -302,11 +366,13 @@ def staff_rentals(request):
     queue = request.GET.get("queue", queues.ALL)
     if queue not in queues.values:
         queue = queues.ALL
+    page = Paginator(services.staff_rentals(queue), 30).get_page(request.GET.get("page"))
     return render(
         request,
         "catalog/rental_list.html",
         {
-            "rentals": services.staff_rentals(queue),
+            "rentals": page,
+            "page": page,
             "title": "Quản lý đơn thuê",
             "staff_view": True,
             "queues": queues.choices,

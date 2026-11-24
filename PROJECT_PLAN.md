@@ -1,6 +1,19 @@
 # Kế hoạch phát triển Camera Rental
 
-## Công việc hiện tại
+## Camera Rental V3 · Một cửa hàng lớn
+
+Hải duyệt triển khai phạm vi một kho, một quỹ, tạo đơn hộ tài khoản đang hoạt động, ảnh sự cố giữ 90 ngày và đối soát ca. Đích kiểm chứng là 5.000 SKU, 10.000 tài sản, 100.000 đơn và 100 người dùng đồng thời. [Kế hoạch triển khai chi tiết](docs/v3-implementation-plan.md) · [Roadmap V3](ROADMAP.md#roadmap-v3)
+
+| Mốc | Điều kiện kết thúc |
+| --- | --- |
+| V3-01 · Chọn nền | **Đã chốt Django/PostgreSQL.** Kiểm schema RentInfra tại `4f18a66`. Đơn bắt buộc tham chiếu một xe, ràng buộc lịch đặt dựa trên xe. Dừng ở sàng lọc vì cần thay lõi để có đơn nhiều SKU và giữ từng mã. Kết quả là đánh giá từ mã, chưa chạy end-to-end. [Schema RentInfra](https://github.com/j4b3r/rentinfra/blob/4f18a663182e16936c791d0b0ba70f0acef0c52f/supabase/migrations/001_schema.sql) |
+| V3-02 · Môi trường | Staging WSGI/HTTPS, nâng và khôi phục có đối chiếu. Hải duyệt dữ liệu thật trước pilot. |
+| V3-03 · Dữ liệu lớn | Danh mục và lịch sử phân trang, báo cáo tổng quan đối chiếu chính xác với sổ tiền. |
+| V3-04 · Vận hành quầy | Tạo đơn hộ có truy vết, quét nguyên tử theo lô, nhận từng phần và ảnh sự cố riêng tư. |
+| V3-05 · Đối soát ca | Một ca ghi tiền tại một thời điểm, đối soát theo phương thức và duyệt chênh lệch. |
+| V3-06 · Nghiệm thu | Kiểm tải, bàn giao và pilot thật. Hải duyệt push, PR, merge, phát hành và tag theo từng hành động. |
+
+## Công việc hiện tại của V2
 
 Định hướng đã duyệt là **Camera Rental Management System**, một Medium Business Application cho một cửa hàng. Mục tiêu phát hành gồm giao nhận, xử lý sự cố, quyết toán tại quầy và báo cáo vận hành. [Phạm vi sản phẩm](docs/v2-product-design.md) · [Roadmap v2.0](ROADMAP.md#roadmap-v20)
 
@@ -10,10 +23,10 @@
 | Chính sách V2-M2 | Hải đã duyệt ngày 23/11/2026 | Hạn trả, đổi/gia hạn, giao nhận từng món, sự cố và quyền vận hành. [Năm chính sách](docs/v2-product-design.md#quyết-định-trước-v2-m2) |
 | V2-M2 · Rental Operations | Đã tích hợp, CI xanh trên `main` | PR #6 đã vào `main` tại `277f5c0`. Đổi/gia hạn, giao nhận theo mã kho, kiểm tra, cách ly và bảo trì. [Bằng chứng sau merge](docs/verification.md#ci-v2-m2-trên-github) |
 | V2-M3 · Pricing & Finance | Đã tích hợp, CI xanh trên `main` | PR #7 đã vào `main` tại `7148810`. Cọc, sổ thu/hoàn, duyệt ngoại lệ, điều chỉnh và đối soát dữ liệu cũ. [Bằng chứng sau merge](docs/verification.md#ci-v2-m3-trên-github) |
-| V2-M4 · Management & Reporting | Đã triển khai và kiểm chứng local | Báo cáo quản lý, thương hiệu, kiểm kê và truy vết trên `integration/v2-m4-m5`. [Chỉ số và kiểm kê](docs/v2-product-design.md#quyết-định-trước-v2-m4) |
-| V2-M5 · Hoàn thiện kỹ thuật | Đạt local, chờ CI ứng viên | Đã kiểm end-to-end, nâng và phục hồi dữ liệu demo, UI và bàn giao từ checkout sạch. Hải duyệt riêng cửa hàng pilot, dữ liệu thật và phát hành. [Bằng chứng V2-M4/M5](docs/verification.md#v2-m4m5--24112026) |
+| V2-M4 · Management & Reporting | Đã tích hợp, CI xanh trên `main` | PR #8 đã vào `main` tại `1add478`. Có báo cáo quản lý, lọc thương hiệu, kiểm kê và truy vết. [Chỉ số và kiểm kê](docs/v2-product-design.md#quyết-định-trước-v2-m4) |
+| V2-M5 · Hoàn thiện kỹ thuật | Đã tích hợp và kiểm chứng với dữ liệu demo | Cùng PR #8. Đã kiểm end-to-end, nâng và phục hồi dữ liệu demo, UI và bàn giao từ checkout sạch. [Bằng chứng V2-M4/M5](docs/verification.md#v2-m4m5--24112026) |
 
-Đợt kế tiếp dùng một PR từ `integration/v2-m4-m5` vào `main`, với các commit nhỏ theo từng tính năng để dễ review.
+Bước còn mở của V2-M5 là Hải duyệt cửa hàng pilot, dữ liệu được phép dùng và phương án chuyển dữ liệu. Sau nghiệm thu pilot, Hải xem xét phát hành và gắn tag riêng. [Điều kiện V2-M5](docs/v2-product-design.md#quyết-định-trước-v2-m5)
 
 ## Base v1.0 · Technical Foundation
 
@@ -41,7 +54,7 @@ Cuối M2, đã có bằng chứng kỹ thuật local cho một phần M3. Audit
 
 G0–G4 của Base đã đạt. Baseline `v1.0.0-qa-baseline` trỏ commit `31ca8a0` đã qua CI trên `main`. Tag là mốc đối chiếu cho thay đổi sau phát hành. [GitHub Release](https://github.com/haibadguy/camera-rental-qa-lab/releases/tag/v1.0.0-qa-baseline) · [Bằng chứng theo commit](docs/verification.md)
 
-Sau khi đóng băng, bản sửa R08 đã vào `main` tại `b334418`. Form báo lỗi mật khẩu quá ngắn bằng tiếng Việt, giữ ngưỡng tám ký tự và các kiểm tra hiện có. Luồng đăng ký và quay lại trang đặt thuê đã được kiểm chứng. [Trạng thái Base và R08](docs/implementation-status.md) · [Kiểm chứng kỹ thuật](docs/verification.md)
+Sau khi đóng băng, bản sửa R08 đã vào `main` tại `b334418`. Form báo lỗi mật khẩu quá ngắn bằng tiếng Việt, giữ ngưỡng tám ký tự và các kiểm tra hiện có. Luồng đăng ký và quay lại trang đặt thuê đã được kiểm chứng. [PR #3](https://github.com/haibadguy/camera-rental-qa-lab/pull/3) · [CI sau bản sửa](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45027902369) · [Kiểm chứng kỹ thuật](docs/verification.md)
 
 ### Biên thay đổi và kiểm chứng của Base
 

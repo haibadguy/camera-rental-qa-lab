@@ -10,6 +10,7 @@
   <div class="page-heading">
     <div>
       <h1>Giao nhận đơn #{{ rental.pk }}</h1>
+      {% if counter_booking %}<p class="muted">Đặt tại quầy bởi {{ counter_booking.actor.get_username }}</p>{% endif %}
       <p class="muted">{{ rental.pickup_date|date:"d/m/Y" }} – {{ rental.return_date|date:"d/m/Y" }}</p>
     </div>
     <span class="status status-{{ rental.status|lower }}">{{ rental.get_status_display }}</span>
@@ -17,6 +18,28 @@
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   {% if perms.catalog.record_rental_finance %}
     <div class="actions"><a class="button button-outline" href="{% url 'finance-ledger' rental.pk %}">Quyết toán tại quầy</a></div>
+  {% endif %}
+  {% if rows and rental.status == "CONFIRMED" or rows and rental.status == "PICKED_UP" %}
+    <section class="operation-section" aria-labelledby="scan-heading">
+      <h2 id="scan-heading">Quét mã kho theo lô</h2>
+      <form method="post" class="panel order-panel" data-scan-form>
+        {% csrf_token %}
+        {{ scan_form.command_id }}{{ scan_form.command_id.errors }}
+        {{ scan_form.mode.as_field_group }}
+        {{ scan_form.codes.as_field_group }}
+        <p class="muted">Mỗi mã một dòng, tối đa 30 mã. Có thể nhập tay hoặc dùng máy quét.</p>
+        <button type="button" class="button-outline" data-scan-camera hidden>Mở máy ảnh</button>
+        <video data-scan-preview playsinline muted hidden width="320"></video>
+        <p data-scan-status role="status"></p>
+        <button type="submit" name="action" value="scan">Ghi nhận lượt quét</button>
+      </form>
+    </section>
+  {% endif %}
+  {% if incidents %}
+    <section class="panel order-panel" aria-labelledby="order-incidents-heading">
+      <h2 id="order-incidents-heading">Sự cố của đơn</h2>
+      <ul>{% for case in incidents %}<li><a href="{% url 'maintenance-detail' case.pk %}">{{ case.asset.code }} · {{ case.get_kind_display }}</a></li>{% endfor %}</ul>
+    </section>
   {% endif %}
   <section class="operation-section" aria-labelledby="handover-heading">
     <h2 id="handover-heading">Thiết bị theo mã kho</h2>

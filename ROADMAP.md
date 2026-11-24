@@ -1,6 +1,15 @@
 # Roadmap Camera Rental Management System
 
-Đích phát hành là một **Medium Business Application** cho một cửa hàng, dùng được từ đặt thuê đến quyết toán và báo cáo. Nền tảng v1.0 đã đóng băng ngày 22/11/2026. V2-M3 đã tích hợp vào `main`. [Phạm vi sản phẩm](docs/v2-product-design.md) · [Bằng chứng kiểm chứng](docs/verification.md)
+Đích phát hành là một **Medium Business Application** cho một cửa hàng, dùng được từ đặt thuê đến quyết toán và báo cáo. Nền tảng v1.0 đã đóng băng ngày 22/11/2026. V2-M4 và phần hoàn thiện kỹ thuật V2-M5 đã tích hợp vào `main`. [Phạm vi sản phẩm](docs/v2-product-design.md) · [Bằng chứng kiểm chứng](docs/verification.md)
+
+## Roadmap V3
+
+Giữ một cửa hàng, một kho, một quỹ dùng chung. Hoàn thiện kỹ thuật và đo tải bằng dữ liệu tổng hợp trong khi chờ pilot thật. [Hàng đợi V3](PROJECT_PLAN.md#camera-rental-v3--một-cửa-hàng-lớn)
+
+- **G1 · Nền:** đánh giá fork theo giấy phép miễn phí, tương thích nghiệp vụ và chi phí chuyển đổi. Chốt Django/PostgreSQL khi ứng viên cần thay lõi nghiệp vụ.
+- **G2 · Sản phẩm:** tạo đơn hộ, quét chuẩn bị/nhận trả theo lô, ảnh sự cố 90 ngày, đối soát tiền cuối ca và truy vết theo đơn.
+- **G3 · Tải và an toàn:** 100 người dùng đồng thời trong 30 phút, p95 lần lượt 300 ms tra lịch, 600 ms vận hành, 700 ms đặt, 2 giây báo cáo tổng quan. 5xx dưới 0,1%, không giữ trùng hoặc ghi tiền lặp. Mục tiêu phục hồi 60 phút và mất dữ liệu tối đa 15 phút.
+- **G4 · Pilot và phát hành:** giảm 50% thời gian thao tác kịch bản 10 món so với V2. Pilot tối thiểu 5 ngày, 20 đơn, 5 ca. Kiểm luồng khách, nhân viên và quản lý, nâng/khôi phục, CI đúng SHA và Hải duyệt riêng.
 
 ## Roadmap v2.0
 
@@ -14,7 +23,7 @@
 | V2-M4 · Management & Reporting | V2-M2 cung cấp dữ liệu kho và vận hành. V2-M3 cung cấp bút toán. Hải duyệt chính sách ngày 24/11/2026. | Màn quản lý lấy tiền thuê và phí thực thu ròng, đơn hàng, thiết bị đang thuê và tỷ lệ sử dụng từ dữ liệu theo kỳ. Tổng đối chiếu được với bản ghi gốc. Danh mục lọc được theo thương hiệu. Kiểm kê phân biệt trong kho, đang thuê và cách ly, ghi chênh lệch cùng người xử lý. Nhật ký truy được thay đổi vận hành và tiền đã duyệt. |
 | V2-M5 · Product Polish & Release | V2-M2–M4 đạt nghiệm thu, Hải duyệt pilot và chuyển đổi dữ liệu/API. | Chạy trọn luồng tại một điểm nhận–trả từ đặt nhiều món đến quyết toán và báo cáo, kể cả trả một phần và sự cố. Hoàn thiện UI responsive cho khách, nhân viên và quản lý, kiểm quyền backend, diễn tập nâng và khôi phục dữ liệu, chạy PostgreSQL và smoke, CI xanh đúng SHA, bàn giao từ checkout sạch và Hải duyệt phát hành. |
 
-V2-M4 và các bước hoàn thiện kỹ thuật V2-M5 dùng chung một PR. Nghiệm thu pilot và phát hành vẫn do Hải duyệt riêng. [Phạm vi đợt tích hợp](PROJECT_PLAN.md#công-việc-hiện-tại)
+V2-M4 và phần hoàn thiện kỹ thuật V2-M5 đã vào `main` tại `1add478` qua một PR. Phần còn mở là phê duyệt pilot, nghiệm thu tại cửa hàng và phê duyệt phát hành. [PR #8](https://github.com/haibadguy/camera-rental-qa-lab/pull/8) · [Công việc hiện tại](PROJECT_PLAN.md#công-việc-hiện-tại)
 
 ## Base v1.0 milestones
 

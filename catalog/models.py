@@ -79,6 +79,7 @@ class Rental(models.Model):
         ordering = ["-id"]
         permissions = [
             ("operate_rentals", "Can perform rental operations"),
+            ("book_for_customer", "Can book rentals for existing customers"),
             ("manage_rental_incidents", "Can resolve rental incidents"),
             ("record_rental_finance", "Can record rental receipts and refunds"),
             ("manage_rental_finance", "Can approve rental finance decisions"),
@@ -508,6 +509,9 @@ class FinanceEntry(models.Model):
     reverses = models.OneToOneField(
         "self", on_delete=models.PROTECT, null=True, blank=True, related_name="reversal"
     )
+    shift = models.ForeignKey(
+        "CashShift", on_delete=models.PROTECT, null=True, blank=True, related_name="entries"
+    )
     recorded_at = models.DateTimeField(auto_now_add=True)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
@@ -669,3 +673,95 @@ class StocktakeLine(models.Model):
                 name="stocktake_line_resolution_actor",
             ),
         ]
+
+
+class RentalFinanceSnapshot(models.Model):
+    rental = models.OneToOneField(
+        Rental, on_delete=models.CASCADE, primary_key=True, related_name="finance_snapshot"
+    )
+    balance_due_vnd = models.DecimalField(max_digits=32, decimal_places=0)
+    deposit_held_vnd = models.DecimalField(max_digits=32, decimal_places=0)
+    legacy_pending = models.BooleanField()
+
+
+class CounterCommand(models.Model):
+    class Action(models.TextChoices):
+        BOOK = "BOOK", "Tạo đơn hộ"
+        PREPARE = "PREPARE", "Chuẩn bị"
+        RECEIVE = "RECEIVE", "Nhận trả"
+
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    command_id = models.UUIDField()
+    action = models.CharField(max_length=8, choices=Action.choices)
+    payload = models.JSONField()
+    rental = models.ForeignKey(
+        Rental, on_delete=models.PROTECT, null=True, related_name="counter_commands"
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["actor", "command_id"], name="counter_command_unique")
+        ]
+
+
+class IncidentPhoto(models.Model):
+    case = models.ForeignKey(MaintenanceCase, on_delete=models.PROTECT, related_name="photos")
+    object_key = models.UUIDField(unique=True, editable=False)
+    command_id = models.UUIDField()
+    original_digest = models.CharField(max_length=64)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    deleted_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["case", "command_id"], name="incident_photo_command_unique")
+        ]
+
+
+class CashShift(models.Model):
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Đang mở"
+        SUBMITTED = "SUBMITTED", "Chờ duyệt"
+        CLOSED = "CLOSED", "Đã chốt"
+
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN)
+    opened_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    opened_at = models.DateTimeField(auto_now_add=True)
+    opening_cash_vnd = models.DecimalField(max_digits=32, decimal_places=0)
+    expected_cash_vnd = models.DecimalField(max_digits=32, decimal_places=0, null=True)
+    expected_transfer_vnd = models.DecimalField(max_digits=32, decimal_places=0, null=True)
+    counted_cash_vnd = models.DecimalField(max_digits=32, decimal_places=0, null=True)
+    confirmed_transfer_vnd = models.DecimalField(max_digits=32, decimal_places=0, null=True)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", null=True
+    )
+    submitted_at = models.DateTimeField(null=True)
+    discrepancy_note = models.TextField(blank=True, max_length=2000)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", null=True
+    )
+    closed_at = models.DateTimeField(null=True)
+    resolution = models.TextField(blank=True, max_length=2000)
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["status"], condition=models.Q(status="OPEN"), name="cash_shift_one_open"
+            ),
+        ]
+
+    @property
+    def cash_difference_vnd(self):
+        if self.counted_cash_vnd is not None:
+            return int(self.counted_cash_vnd) - int(self.expected_cash_vnd)
+        return None
+
+    @property
+    def transfer_difference_vnd(self):
+        if self.confirmed_transfer_vnd is not None:
+            return int(self.confirmed_transfer_vnd) - int(self.expected_transfer_vnd)
+        return None

@@ -1,9 +1,11 @@
+from uuid import uuid4
+
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import Paginator
-from django.http import Http404
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import (
@@ -241,7 +243,15 @@ def _render_order(request, rental, *, error=None, status=200):
     context = {
         "rental": rental,
         "rows": rows,
+        "counter_booking": rental.counter_commands.filter(action="BOOK").select_related("actor").first(),
+        "scan_form": ScanForm(
+            request.POST if request.POST.get("action") == "scan" else None,
+            initial={"mode": "PREPARE" if rental.status == Rental.Status.CONFIRMED else "RECEIVE"},
+        ),
         "changes": rental.changes.select_related("reviewed_by"),
+        "incidents": services.maintenance_cases(request.user).filter(
+            handover__reservation__line__rental=rental
+        ),
         "can_confirm_pickup": bool(rows)
         and services.can_pick_up(rental, timezone.localdate())
         and all(item and item.prepared_at for _, item in rows),
@@ -251,6 +261,18 @@ def _render_order(request, rental, *, error=None, status=200):
     return render(
         request, "catalog/staff/operations_order.html", context, status=status
     )
+
+
+class ScanForm(forms.Form):
+    command_id = forms.UUIDField(widget=forms.HiddenInput, initial=uuid4)
+    mode = forms.ChoiceField(label="Thao tác", choices=(("PREPARE", "Chuẩn bị"), ("RECEIVE", "Nhận trả")))
+    codes = forms.CharField(
+        label="Mã kho", max_length=1500,
+        widget=forms.Textarea(attrs={"rows": 3, "data-scan-codes": "", "maxlength": 1500}),
+    )
+
+    def clean_codes(self):
+        return [code.strip() for code in self.cleaned_data["codes"].splitlines() if code.strip()]
 
 
 def _apply_handover(staff, rental, values):
@@ -281,6 +303,20 @@ def operations_order(request, rental_id):
     _require_operator(request.user)
     rental = get_object_or_404(Rental.objects.select_related("customer"), pk=rental_id)
     if request.method == "POST":
+        if request.POST.get("action") == "scan":
+            form = ScanForm(request.POST)
+            if form.is_valid():
+                values = form.cleaned_data
+                try:
+                    services.scan_assets(
+                        request.user, rental.pk, values["mode"], values["codes"], values["command_id"]
+                    )
+                except services.RentalError as error:
+                    return _render_order(request, rental, error=error, status=error.status)
+                else:
+                    messages.success(request, f"Đã ghi nhận {len(values['codes'])} mã kho.")
+                    return redirect("operations-order", rental_id=rental.pk)
+            return _render_order(request, rental, status=400)
         form = HandoverActionForm(request.POST)
         if not form.is_valid():
             return _render_order(
@@ -392,9 +428,24 @@ def maintenance_detail(request, case_id):
     _require_operator(request.user)
     case = get_object_or_404(services.maintenance_cases(request.user), pk=case_id)
     manager = services.can_manage(request.user)
+    photo_form = PhotoForm(
+        request.POST if request.POST.get("action") == "photo" else None,
+        request.FILES if request.POST.get("action") == "photo" else None,
+    )
     error = None
     status = 200
-    if request.method == "POST":
+    if request.method == "POST" and request.POST.get("action") == "photo":
+        status = 400
+        if photo_form.is_valid():
+            try:
+                services.attach_photo(request.user, case.pk, **photo_form.cleaned_data)
+            except services.RentalError as failure:
+                error = failure
+                status = failure.status
+            else:
+                messages.success(request, "Đã lưu ảnh sự cố.")
+                return redirect("maintenance-detail", case_id=case.pk)
+    elif request.method == "POST":
         form = MaintenanceActionForm(request.POST)
         if not form.is_valid():
             error = "Kiểm tra trạng thái và ghi chú xử lý."
@@ -423,9 +474,32 @@ def maintenance_detail(request, case_id):
         "catalog/staff/maintenance_detail.html",
         {
             "case": case,
+            "photo_form": photo_form if case.kind in services.PHOTO_KINDS else None,
+            "photos": case.photos.filter(expires_at__gt=timezone.now(), deleted_at__isnull=True).select_related("uploaded_by"),
             "can_manage": manager,
             "resolution_choices": MaintenanceCase.Resolution.choices,
             "error": error,
         },
         status=status,
     )
+
+
+class PhotoForm(forms.Form):
+    command_id = forms.UUIDField(widget=forms.HiddenInput, initial=uuid4)
+    upload = forms.FileField(
+        label="Ảnh sự cố",
+        widget=forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
+    )
+
+
+@login_required
+@require_safe
+def incident_photo(request, case_id, photo_id):
+    _require_operator(request.user)
+    try:
+        photo = services.open_photo(request.user, case_id, photo_id)
+    except (ObjectDoesNotExist, FileNotFoundError) as error:
+        raise Http404 from error
+    response = FileResponse(photo, content_type="image/jpeg")
+    response["Cache-Control"] = "private, no-store"
+    return response

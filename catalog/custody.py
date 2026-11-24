@@ -82,14 +82,18 @@ def prepare_asset(staff, rental_id, reservation_id, notes=""):
     if not can_operate(staff):
         raise RentalError("Cần quyền chuẩn bị thiết bị.", 403)
     rental, _ = lock_rental(Rental.objects.all(), rental_id)
+    reservation = AssetReservation.objects.select_related(
+        "asset", "line__equipment"
+    ).get(pk=reservation_id, line__rental=rental, released_at__isnull=True)
+    return prepare_locked(staff, rental, reservation, notes)
+
+
+def prepare_locked(staff, rental, reservation, notes=""):
     if (
         rental.status != Rental.Status.CONFIRMED
         or rental.return_date <= timezone.localdate()
     ):
         raise RentalError("Đơn phải còn hạn và chưa bàn giao.", 409)
-    reservation = AssetReservation.objects.select_related(
-        "asset", "line__equipment"
-    ).get(pk=reservation_id, line__rental=rental, released_at__isnull=True)
     if (
         reservation.asset.status != AssetUnit.Status.READY
         or checked_out_assets().filter(asset=reservation.asset).exists()
@@ -142,8 +146,15 @@ def confirm_asset_pickup(staff, rental, now):
 @transaction.atomic
 def receive_asset(staff, rental_id, handover_id):
     rental, handover = lock_handover_context(staff, rental_id, handover_id)
+    receive_locked(staff, rental, handover)
+    sync_rental_return(rental)
+    return handover
+
+
+def receive_locked(staff, rental, handover):
     if (
         rental.status != Rental.Status.PICKED_UP
+        or not handover.picked_up_at
         or handover.returned_at
         or handover.lost_at
     ):
@@ -154,8 +165,6 @@ def receive_asset(staff, rental_id, handover_id):
     AssetUnit.objects.filter(
         pk=handover.asset_id, status=AssetUnit.Status.READY
     ).update(status=AssetUnit.Status.INSPECTION)
-    sync_rental_return(rental)
-    return handover
 
 
 def record_asset_inspection(staff, rental_id, handover_id, result, notes):

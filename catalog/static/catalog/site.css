@@ -336,3 +336,14 @@ textarea { resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }
+
+[data-scan-preview] {
+  display: block;
+  max-width: 100%;
+  margin-block: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+[data-scan-preview][hidden] {
+  display: none;
+}

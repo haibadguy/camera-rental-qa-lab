@@ -1,7 +1,7 @@
 # AGENTS.md — Camera Rental Product Development
 
 ## Mission
-Develop Camera Rental Management System as a medium-sized business application for one professional camera rental store. Cover booking, rental operations, maintenance, counter settlement and management reporting. Base v1.0 is the frozen technical foundation and V2-M3 is integrated into main. Work on product development and developer verification only.
+Develop Camera Rental Management System as a medium-sized business application for one professional camera rental store. Cover booking, rental operations, maintenance, counter settlement and management reporting. Base v1.0 is the frozen technical foundation. V2-M4 and the technical scope of V2-M5 are integrated into main. Work on product development and developer verification only.
 
 Follow [ROADMAP.md](ROADMAP.md) for V2-M2 through V2-M5 and release gates. Use [PROJECT_PLAN.md](PROJECT_PLAN.md) for the current work, [the product design](docs/v2-product-design.md) for scope and pending policy decisions, and [docs/verification.md](docs/verification.md) for recorded evidence. Obtain Hải's approval for the relevant policies before starting a milestone, then execute the approved work through verification.
 

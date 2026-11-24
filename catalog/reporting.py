@@ -12,7 +12,7 @@ from .inventory import (
     equipment_with_physical_stock,
     rental_asset_history,
 )
-from .models import AssetHandover, AssetReservation, AssetUnit, MaintenanceCase, Rental
+from .models import AssetHandover, AssetReservation, AssetUnit, Equipment, MaintenanceCase, Rental
 from .roles import can_manage_reporting
 
 
@@ -54,7 +54,7 @@ def _seconds(intervals):
     return sum((end - start).total_seconds() for start, end in intervals)
 
 
-def _utilization(start, end, now, *, legacy_stock):
+def _utilization(start, end, now, *, legacy_stock, details=True):
     end = min(now, end)
     borrowed = defaultdict(list)
     for asset_id, pickup, receipt, lost, handover_id, rental_id in (
@@ -110,6 +110,7 @@ def _utilization(start, end, now, *, legacy_stock):
         .values_list("asset_id", "first")
     )
     rows = []
+    available = used_total = 0
     incomplete = legacy_stock
     for asset in (
         AssetUnit.objects.filter(equipment__tracks_assets=True)
@@ -147,6 +148,9 @@ def _utilization(start, end, now, *, legacy_stock):
             _seconds(_intervals(a, b, gaps)) for a, b in used
         )
         if available_seconds:
+            available += available_seconds / 3600
+            used_total += used_seconds / 3600
+        if available_seconds and details:
             rows.append(
                 {
                     "asset": asset,
@@ -160,26 +164,27 @@ def _utilization(start, end, now, *, legacy_stock):
                     "until_at": upper,
                 }
             )
-    available = sum(row["available_hours"] for row in rows)
-    used = sum(row["used_hours"] for row in rows)
+
     return {
         "rows": rows,
         "available_hours": available,
-        "used_hours": used,
-        "percent": 100 * used / available if available else None,
+        "used_hours": used_total,
+        "percent": 100 * used_total / available if available else None,
         "incomplete": incomplete,
     }
 
 
-def rental_report(actor, first, last):
+def rental_report(actor, first, last, *, summary=False, limit_period=False):
     _require_manager(actor)
     start, end = _period(first, last)
+    if (summary or limit_period) and (last - first).days >= 366:
+        raise RentalError("Kỳ báo cáo tối đa 366 ngày.")
     now = timezone.now()
     orders = Rental.objects.filter(
         pickup_date__gte=first, pickup_date__lte=last
     ).select_related("customer")
     entries = period_movements(start, end)
-    stock = list(equipment_with_physical_stock())
+    stock = equipment_with_physical_stock()
     counts = orders.aggregate(
         active=Count(
             "pk",
@@ -213,14 +218,38 @@ def rental_report(actor, first, last):
         "orders": orders,
         "entries": entries,
         "stock": stock,
-        "outstanding": sum(item.outstanding for item in stock),
+        "outstanding": checked_out_assets().filter(asset__equipment__tracks_assets=True).count() + Rental.objects.filter(
+            status=Rental.Status.PICKED_UP, equipment__tracks_assets=False
+        ).aggregate(total=Sum("quantity", default=0))["total"],
         "out_assets": checked_out_assets()
         .select_related("asset__equipment", "line")
         .order_by("asset__code"),
         "usage": _utilization(
-            start, end, now, legacy_stock=any(not item.tracks_assets for item in stock)
+            start, end, now,
+            legacy_stock=Equipment.objects.filter(tracks_assets=False).exists(),
+            details=not summary,
         ),
     }
+
+
+def report_detail(actor, section, first, last):
+    _require_manager(actor)
+    start, end = _period(first, last)
+    if (last - first).days >= 366:
+        raise RentalError("Kỳ báo cáo tối đa 366 ngày.")
+    if section == "orders":
+        return Rental.objects.filter(
+            pickup_date__range=(first, last)
+        ).select_related("customer").prefetch_related("lines")
+    if section == "entries":
+        return period_movements(start, end)
+    if section == "stock":
+        return equipment_with_physical_stock()
+    if section == "out_assets":
+        return checked_out_assets().select_related("asset", "line").order_by("asset__code")
+    return _utilization(
+        start, end, timezone.now(), legacy_stock=Equipment.objects.filter(tracks_assets=False).exists()
+    )["rows"]
 
 
 def rental_audit(actor, rental_id):

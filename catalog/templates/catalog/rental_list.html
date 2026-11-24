@@ -41,4 +41,5 @@
       <li class="panel empty-state">{% if staff_view and active_queue != 'all' %}Không có đơn trong mục này.{% else %}Chưa có đơn thuê.{% endif %}</li>
     {% endfor %}
   </ul>
+  {% include "catalog/pagination.html" %}
 {% endblock %}

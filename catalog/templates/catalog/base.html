@@ -27,6 +27,9 @@
           {% if perms.catalog.operate_rentals %}
             <a href="{% url 'operations-queue' %}"{% if request.resolver_match.url_name == 'operations-queue' %} aria-current="page"{% endif %}>Vận hành thuê</a>
           {% endif %}
+          {% if perms.catalog.record_rental_finance %}
+            <a href="{% url 'cash-shifts' %}">Ca thu ngân</a>
+          {% endif %}
           {% if perms.catalog.count_rental_stock %}
             <a href="{% url 'stocktakes' %}"{% if request.resolver_match.url_name == 'stocktakes' %} aria-current="page"{% endif %}>Kiểm kê</a>
           {% endif %}

@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django import forms
 from django.utils import timezone
 
@@ -65,6 +67,11 @@ class OrderForm(PeriodForm):
         if not self.errors and not data["lines"]:
             raise forms.ValidationError("Chọn số lượng cho ít nhất một mẫu thiết bị.")
         return data
+
+
+class CounterOrderForm(OrderForm):
+    username = forms.CharField(label="Tên đăng nhập của khách", max_length=150)
+    command_id = forms.UUIDField(widget=forms.HiddenInput, initial=uuid4)
 
 
 class AssetForm(forms.ModelForm):

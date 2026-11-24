@@ -1,0 +1,27 @@
+{% extends "catalog/base.html" %}
+{% block title %}Ca thu ngân | Camera Rental{% endblock %}
+{% block content %}
+  <div class="page-heading"><h1>Ca thu ngân</h1></div>
+  {% if active %}
+    <p><a class="button" href="{% url 'cash-shift-detail' active.pk %}">Mở chi tiết ca #{{ active.pk }}</a></p>
+  {% else %}
+    <form method="post" class="panel order-panel operation-form">
+      {% csrf_token %}
+      {{ form.as_div }}
+      <button type="submit">Mở ca</button>
+    </form>
+  {% endif %}
+  <section class="operation-section" aria-label="Lịch sử ca">
+    <h2>Lịch sử ca</h2>
+    <ul class="workspace-rows">
+      {% for shift in page %}
+        <li class="panel workspace-row">
+          <a href="{% url 'cash-shift-detail' shift.pk %}">Ca #{{ shift.pk }}</a>
+          <span>{{ shift.opened_at|date:"d/m/Y H:i" }} · {{ shift.opened_by.get_username }}</span>
+          <span>{{ shift.get_status_display }}</span>
+        </li>
+      {% empty %}<li class="panel empty-state">Chưa có ca thu ngân.</li>{% endfor %}
+    </ul>
+    {% include "catalog/pagination.html" %}
+  </section>
+{% endblock %}

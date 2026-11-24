@@ -148,3 +148,33 @@ docker compose @composeVerify exec -T -e POSTGRES_DB=camera_m5_restore web pytho
 ```
 
 Đối chiếu schema và bản ghi ở hai database, gồm đơn, giao nhận, sự cố, sổ tiền và phiên kiểm kê. Khi diễn tập nâng từ bản trước, khôi phục dump bản trước vào database mới rồi chạy `migrate --noinput` với `POSTGRES_DB` trỏ đến database đó. Bản sao demo phục vụ nghiệm thu kỹ thuật. Việc dùng dữ liệu cửa hàng và chuyển đổi pilot cần Hải duyệt. [Bằng chứng kiểm chứng](verification.md)
+
+
+## V3 · Staging và xác minh
+
+Staging dùng image đã ghi SHA hoặc digest, PostgreSQL riêng và tên host có DNS trỏ đến Caddy. Tạo file môi trường ngoài repo với `CAMERA_IMAGE`, `CAMERA_HOST`, `DJANGO_SECRET_KEY`, `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` và `CASH_SHIFT_REQUIRED`. Host và cổng HTTPS phải thông đến Caddy để cấp chứng thư. Chỉ proxy nhận kết nối ngoài. Gunicorn, lệnh quản trị và worker dọn ảnh dùng chung volume ảnh riêng tư.
+
+```powershell
+$staging = @('--env-file', '<file-moi-truong>', '-f', 'compose.staging.yaml', '-p', 'camera-staging')
+docker compose @staging config --quiet
+docker compose @staging run --rm manage check --deploy
+docker compose @staging run --rm manage migrate --noinput
+docker compose @staging run --rm manage rebuild_finance_snapshots
+docker compose @staging run --rm manage rebuild_finance_snapshots --verify
+docker compose @staging --profile serve up -d --wait
+```
+
+Bật `CASH_SHIFT_REQUIRED=1` từ lúc bắt đầu thu/hoàn có đối soát. Thu, hoàn hoặc đảo giao dịch tiền thật cần ca mở. API lặp đúng mã bút toán cũ vẫn trả kết quả đã ghi. Cấp quyền tạo hộ thêm vào quyền vận hành bằng `python manage.py set_rental_role <nhan-vien> counter-booker`. Trang vận hành hiển thị máy ảnh trên trình duyệt hỗ trợ Barcode Detection API. Nhập tay và máy quét hoạt động như bàn phím dùng cùng form mã kho.
+
+Khi nâng dữ liệu, sao lưu và chạy restore thử ở database mới theo quy trình V2-M5. Chạy `rebuild_finance_snapshots --verify` sau backfill. Đối chiếu đơn, lịch đang giữ, trạng thái tài sản, tổng theo phương thức và các bút toán nguồn trước khi mở ghi. Lưu bản sao PostgreSQL mã hóa và bật lưu WAL ngoài máy chủ qua hạ tầng database. Kiểm tra restore theo thời điểm trước pilot. Kiểm độ trễ bản sao, job dọn ảnh, lỗi 5xx và các ca đã nộp đang chờ duyệt. Đặt thời hạn ảnh trong lưu trữ theo 90 ngày từ ngày tải, kể cả bản sao nếu có.
+
+### Dữ liệu và tải V3
+
+Tạo database biệt lập, dùng mật khẩu giả qua biến môi trường `CAMERA_SCALE_PASSWORD`. Seed trong application container nối database này, rồi chạy tải từ container kết nối cùng database để tạo session tổng hợp và bắn HTTP qua proxy. `--host` phải khớp host của proxy. Với CA thử nghiệm riêng, đặt `SSL_CERT_FILE` trỏ đến CA đó.
+
+```powershell
+docker compose @staging exec -T -e CAMERA_SCALE_PASSWORD web python manage.py seed_scale
+docker compose @staging exec -T web python -m scripts.v3_load --url https://camera-staging.example.test --host camera-staging.example.test
+```
+
+Fixture tạo 5.000 SKU, 10.000 mã và 100.000 đơn lịch sử có bút toán, không sửa dữ liệu cũ. Dùng `--skus 50` trên database mới để thử lệnh nhanh. Mỗi user ảo nghỉ 2,5 giây giữa tương tác. Kết quả ghi p95 qua HTTP, tỷ lệ lỗi, timeout và xung đột giữ lịch. Dùng `--users 10 --warmup 5 --duration 30` để kiểm đường chạy trước phép đo 30 phút. Không chạy trên hệ đang phục vụ người dùng.

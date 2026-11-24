@@ -1,5 +1,13 @@
 # Trạng thái xác minh Camera Rental
 
+## V3 · Kiểm chứng trước push
+
+Verify trên working tree V3 dựa trên `1add478`, project biệt lập `camera-v3-push-580729c4`, cổng 18078 và PostgreSQL 17.11. Cài mới đến `catalog.0009`, Django check và migration drift đạt. Bộ PostgreSQL đạt **77/77** trong 42,327 giây và cả ba nhóm HTTP smoke đạt. Lệnh `Verify` exit 0. Lượt trước đó cấp quyền tài khoản demo trong khi smoke đang chạy, nên ca kiểm `403` không còn đúng điều kiện. Lượt đạt chạy smoke trước khi cấp quyền cho Chrome.
+
+Chrome headless chạy qua tạo đơn hộ, quét chuẩn bị và nhận trả, ghi sự cố, tải ảnh có kiểm quyền và đối soát ca ở 1440 × 960 và 390 × 844. Hai đơn demo #5 và #6 trả đủ thiết bị. Ca được nộp và chốt với 410.000 ₫ tiền mặt đối chiếu.
+
+Fixture V3 trên staging local tạo 5.000 SKU, 10.000 tài sản và 100.000 đơn lịch sử. Đã tính và đối chiếu 100.001 số dư, gồm một đơn demo. Kết quả seed và đối chiếu chưa xác nhận mục tiêu tải 30 phút. Pilot thật và diễn tập phục hồi theo mục tiêu thời gian vẫn thuộc mốc nghiệm thu. [Kế hoạch V3](v3-implementation-plan.md) · [Cách chạy Verify và đo tải](setup.md)
+
 ## V2-M4/M5 · 24/11/2026
 
 **Pass local và bàn giao độc lập.** Runtime `1c8c2e745131821249e0b85f6042bd9d1eb72566` dựng từ archive Git. 29 tệp runtime và test thay đổi khớp SHA-256 giữa archive và container. Project `camera-v2-m45-review-104cd54f`, cổng 18055, volume mới. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19.
@@ -13,7 +21,6 @@
 | Nâng dữ liệu demo | **Pass**. Khôi phục dump V2-M3 vào `camera_m45_upgrade_1bdf636c` rồi chạy `0008`. Số hàng và nội dung của 10 bảng nghiệp vụ cũ khớp sau khi bỏ các cột mới khỏi phép so sánh. Tám tài sản theo mã kho có mốc đo. Database nguồn được giữ. |
 | Khôi phục sau nghiệm thu | **Pass**. `pg_dump -Fc` và `pg_restore --exit-on-error` vào `camera_m45_restore_1bdf636c`, đối chiếu số hàng và nội dung 12 bảng. Bản sao đọc được báo cáo và các phiên đã chốt. System check và migration drift trên bản sao đạt. |
 | Bàn giao độc lập | **Pass**. Agent dùng archive đúng SHA và hướng dẫn repo, chạy Verify exit 0 trên `camera-v2-m45-handoff-621cff46`, cổng 18057. 70/70 test, cả ba nhóm smoke, Web/API báo cáo trả 200 sau khi cấp vai trò. Agent xác định đúng tổ chức code, test và tác động của bộ lọc báo cáo giả định. |
-| CI và pilot | **Not Run** đối với ứng viên tích hợp. CI chờ push được duyệt. Pilot và phát hành chờ quyết định riêng. |
 
 ```powershell
 $env:COMPOSE_FILE = "compose.yaml;$env:TEMP\camera-v2-m45-network-55.yaml"
@@ -24,6 +31,24 @@ docker exec camera-v2-m45-review-104cd54f-web-1 python manage.py test catalog.te
 Override IPAM dùng subnet trống `10.250.55.0/24`. Bàn giao dùng subnet riêng `10.250.57.0/24`. Ảnh, script Chrome và script diễn tập có trong thư mục tạm `camera-v2-m4-m5-browser-review`. Volume hiện hữu được giữ.
 
 Lượt tích hợp trước ứng viên có health check chậm và lỗi tên cột tổng trùng cột chi tiết. Web tự hồi phục và truy vấn đã sửa. Lượt Chrome đầu của ứng viên chạy chồng với smoke, nên phải chạy lại tuần tự với mã kho demo riêng. Lượt cuối đạt trên cùng SHA runtime.
+
+### CI và kiểm chứng sau merge
+
+- **CI nhánh tích hợp · Pass.** Run push trên `integration/v2-m4-m5` đạt tại `78aa1e253f1c71d902ecaf26a040e995332bf0b2`. [GitHub Actions](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45320300124)
+- **CI trên main · Pass.** PR #8 vào `main` ngày 24/11/2026 tại `1add47881a986a002323d305e1fc6daa47db1d42`. Cây Git khớp với đầu nhánh tích hợp. Run push trên SHA merge đạt build, migration, seed, Django check, kiểm tra migration drift, PostgreSQL và HTTP smoke. [PR #8](https://github.com/haibadguy/camera-rental-qa-lab/pull/8) · [GitHub Actions trên main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45321893773)
+- **Verify local · Pass.** Dựng từ `git archive` của `1add478` trong project `camera-v2-main-af88b9be`, cổng 18058 và volume mới. Bảy tệp báo cáo, kiểm kê, migration, template và smoke đối chiếu SHA-256 khớp với container. Docker 29.6.2, Compose 5.3.1, PostgreSQL 17.11 và Django 5.2.19. `Verify` exit 0, `catalog.0008` đã áp dụng, **70/70 test** trong 19,541 giây và cả ba nhóm HTTP smoke đạt. Lượt đầu exit 1 vì Docker Desktop dừng ngay sau khi PostgreSQL khởi động. Đã mở lại Docker và chạy lại trên project mới, giữ các volume.
+- **Tranh chấp và trình duyệt · Pass.** Lượt chạy riêng đạt **7/7 test**. Chrome chạy luồng đặt hai món, trả từng phần, sự cố, quyết toán, báo cáo và kiểm kê ở 1440 × 1000, 390 × 844, 320 × 780 với đơn demo #5–#7. Đã xem ảnh báo cáo desktop và đơn khách mobile, đối chiếu thực thu qua API và kiểm quyền 403 cho tài khoản thiếu quyền.
+- **Nâng và khôi phục demo · Pass.** Dùng `pg_restore` và `createdb -T` để tạo bản sao dữ liệu `0007`, chạy `manage.py migrate --noinput` lên `0008`, đối chiếu số hàng và checksum 10 bảng nghiệp vụ. Tám tài sản có mốc đo. Dump sau kiểm thử bằng `pg_dump -Fc`, khôi phục bằng `pg_restore --exit-on-error`, đối chiếu 12 bảng và đọc được báo cáo cùng các phiên kiểm kê đã chốt. Các lệnh kết thúc exit 0 trên project biệt lập.
+- **Pilot và phát hành · Chờ duyệt.** Bằng chứng đủ để Hải xem xét phần kỹ thuật. Còn cần Hải duyệt cửa hàng pilot, dữ liệu được phép dùng và phương án chuyển dữ liệu trước khi nghiệm thu tại cửa hàng. Phát hành và tag cần duyệt riêng. [Điều kiện V2-M5](v2-product-design.md#quyết-định-trước-v2-m5)
+
+```powershell
+$env:COMPOSE_FILE = "compose.yaml;<thư-mục-kiểm-chứng>\network-retry.yaml"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 -Action Verify -Project camera-v2-main -Port 18058
+docker exec camera-v2-main-af88b9be-web-1 python manage.py test catalog.tests.ConcurrentBookingTests catalog.test_schedule_changes.RentalChangeConcurrencyTests catalog.test_maintenance.ConcurrentMaintenanceTests catalog.test_finance.FinanceConcurrencyTests catalog.test_management.StocktakeConcurrencyTests --verbosity 2
+node "<thư-mục-kiểm-chứng>\browser\review.cjs"
+```
+
+Thư mục tạm `camera-v2-main-1add478-20261124-110505` giữ archive, log và ảnh. `network-retry.yaml` dùng subnet `10.250.59.0/24`. Lượt Chrome dùng fixture demo, vai trò `manager`, `finance-manager`, `reporting-manager` cho `management-browser` và `CAMERA_M4_URL=http://127.0.0.1:18058`, `CAMERA_M4_SUFFIX=MAIN`, `CAMERA_M4_PLAYWRIGHT` trỏ tới `playwright-core` trong thư mục `browser`.
 
 ## V2-M3 · 24/11/2026
 
@@ -80,6 +105,10 @@ Lượt đầu đạt 50 test nhưng smoke còn theo quy trình bàn giao cũ. M
 
 - **Nhánh tính năng · Pass.** Run push trên `feature/v2-m2` đạt ở SHA `7657a3e092902f7dfde85ac406a3003a292f2f2a`. [GitHub Actions](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45259641984)
 - **Sau merge · Pass.** PR #6 vào `main` ngày 24/11/2026 tại `277f5c0b3fc354fb6da8c741725b3cae9b6e724e`. Run push trên cùng SHA đạt build, migrations, Django check, migration drift, suite PostgreSQL và HTTP smoke. [PR #6](https://github.com/haibadguy/camera-rental-qa-lab/pull/6) · [GitHub Actions trên main](https://github.com/haibadguy/camera-rental-qa-lab/actions/runs/45260369314)
+
+### Điểm khôi phục khi tích hợp V2-M2
+
+Worktree Maintenance ở `00a2c65` cung cấp luồng cách ly và kiểm thử tranh chấp bảo trì. Schedule ở `5e95e3e` được đối chiếu với bản dùng `custody.lock_rental`. Adapter Web từ worktree `04a50b3` được tích hợp cùng quyền, route và template. Các điểm khôi phục local nằm dưới `refs/checkpoints/v2-m2/`: `original-index` (`bf4bee6`), `original-main` (`32383fb`) và `original-web` (`9115b49`). Tài liệu QA cũ có thể đọc bằng `git show 04a50b3:docs/qa/r01-catalog.md`.
 
 ## V2-M1 · 23/11/2026
 

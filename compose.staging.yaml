@@ -1,0 +1,62 @@
+# Standalone configuration. Start with --profile serve only after migrating.
+x-app: &app
+  image: ${CAMERA_IMAGE:?Set CAMERA_IMAGE to the approved image}
+  environment:
+    DJANGO_STAGING: "1"
+    DJANGO_ALLOWED_HOSTS: ${CAMERA_HOST:?Set the staging hostname}
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set a staging secret}
+    POSTGRES_HOST: ${POSTGRES_HOST:?Set the staging PostgreSQL hostname}
+    POSTGRES_DB: ${POSTGRES_DB:-camera_rental}
+    POSTGRES_USER: ${POSTGRES_USER:-camera_rental}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a staging database password}
+    CASH_SHIFT_REQUIRED: ${CASH_SHIFT_REQUIRED:-0}
+    INCIDENT_MEDIA_ROOT: /private/incidents
+  volumes:
+    - incidents:/private/incidents
+
+services:
+  web:
+    <<: *app
+    profiles: [serve]
+    command: ["gunicorn", "--bind=0.0.0.0:8000", "--workers=2", "--threads=4", "--access-logfile=-", "--error-logfile=-", "config.wsgi:application"]
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - 'import os; from urllib.request import Request, urlopen; urlopen(Request("http://127.0.0.1:8000/", headers={"Host": os.environ["DJANGO_ALLOWED_HOSTS"], "X-Forwarded-Proto": "https"}), timeout=3).close()'
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  proxy:
+    image: caddy:2-alpine
+    profiles: [serve]
+    environment:
+      CAMERA_HOST: ${CAMERA_HOST:?Set the staging hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls:/data
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+  photo-purge:
+    <<: *app
+    profiles: [serve]
+    command: ["sh", "-ec", "while true; do python manage.py purge_incident_photos; sleep 3600; done"]
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+  manage:
+    <<: *app
+    profiles: [manage]
+    entrypoint: ["python", "manage.py"]
+
+volumes:
+  incidents:
+  tls:

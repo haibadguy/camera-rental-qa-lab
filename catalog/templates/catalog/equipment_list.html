@@ -54,7 +54,7 @@
       <div class="catalog-results">
         <nav class="kind-tabs" aria-label="Loại thiết bị">
           {% for value, label in form.fields.kind.choices %}
-            <a href="{% url 'equipment-list' %}{% if value %}{% querystring kind=value %}{% else %}{% querystring kind=None %}{% endif %}#thiet-bi" data-catalog-kind="{{ value }}"{% if form.kind.value|default_if_none:'' == value %} aria-current="true"{% endif %}>{% if value %}{{ label }}{% else %}Tất cả{% endif %}</a>
+            <a href="{% url 'equipment-list' %}{% if value %}{% querystring kind=value page=None %}{% else %}{% querystring kind=None page=None %}{% endif %}#thiet-bi" data-catalog-kind="{{ value }}"{% if form.kind.value|default_if_none:'' == value %} aria-current="true"{% endif %}>{% if value %}{{ label }}{% else %}Tất cả{% endif %}</a>
           {% endfor %}
         </nav>
         {% if form.cleaned_data.pickup_date and form.cleaned_data.return_date and not form.errors %}
@@ -87,6 +87,7 @@
             </li>
           {% endfor %}
         </ul>
+        {% include "catalog/pagination.html" with anchor="#thiet-bi" %}
       </div>
     </div>
   </section>

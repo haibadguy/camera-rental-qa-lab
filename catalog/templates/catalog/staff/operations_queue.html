@@ -4,7 +4,10 @@
   <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'staff-rentals' %}">Quản lý đơn thuê</a></nav>
   <div class="page-heading">
     <h1>Vận hành thuê</h1>
-    <a class="button button-outline" href="{% url 'maintenance-list' %}">Bảo trì và sự cố</a>
+    <div class="actions">
+      {% if perms.catalog.book_for_customer %}<a class="button" href="{% url 'counter-book-order' %}">Tạo đơn tại quầy</a>{% endif %}
+      <a class="button button-outline" href="{% url 'maintenance-list' %}">Bảo trì và sự cố</a>
+    </div>
   </div>
   {% if pending_changes %}
     <section class="panel order-panel operation-section" aria-labelledby="pending-changes">

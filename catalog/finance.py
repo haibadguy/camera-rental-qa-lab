@@ -3,18 +3,18 @@ from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import Case, DecimalField, F, Value, When
+from django.db.models import Case, Count, DecimalField, F, Q, Sum, Value, When
 from django.utils import timezone
 
+from .cash_shifts import CASH_ENTRIES, RECEIPTS, REFUNDS, locked_shift_for_entry
 from .custody import rental_handovers
 from .errors import RentalError
-from .models import Equipment, FinanceCharge, FinanceEntry, MaintenanceCase, Rental
+from .models import (
+    Equipment, FinanceCharge, FinanceEntry, MaintenanceCase, Rental, RentalFinanceSnapshot
+)
 from .roles import can_manage_finance, can_record_finance
 
 Kind = FinanceEntry.Kind
-RECEIPTS = (Kind.RENT_RECEIPT, Kind.DEPOSIT_RECEIPT)
-REFUNDS = (Kind.RENT_REFUND, Kind.DEPOSIT_REFUND)
-CASH_ENTRIES = RECEIPTS + REFUNDS
 CHARGE_ENTRIES = (Kind.DEPOSIT_APPLIED, Kind.WAIVER)
 REVERSIBLE_ENTRIES = CASH_ENTRIES + CHARGE_ENTRIES
 MAX_ENTRY_VND = 10**26 - 1
@@ -129,7 +129,35 @@ def finance_summary(rental):
     ).summary()
 
 
+def snapshot_values(ledger):
+    return {
+        "balance_due_vnd": 0 if ledger.legacy_pending else max(0, ledger.balance),
+        "deposit_held_vnd": ledger.deposit_held,
+        "legacy_pending": ledger.legacy_pending,
+    }
+
+
+def refresh_snapshot(rental):
+    ledger = Ledger(rental, list(rental.finance_entries.all()), list(rental.finance_charges.all()))
+    RentalFinanceSnapshot.objects.update_or_create(
+        rental=rental, defaults=snapshot_values(ledger)
+    )
+
+
 def receivables(rentals):
+    totals = rentals.aggregate(
+        balance_due_vnd=Sum("finance_snapshot__balance_due_vnd", default=0),
+        deposit_held_vnd=Sum("finance_snapshot__deposit_held_vnd", default=0),
+        legacy_pending=Count("finance_snapshot", filter=Q(finance_snapshot__legacy_pending=True)),
+    )
+    for key, amount in _uncached_receivables(
+        rentals.filter(finance_snapshot__isnull=True)
+    ).items():
+        totals[key] += amount
+    return totals
+
+
+def _uncached_receivables(rentals):
     totals = {"balance_due_vnd": 0, "deposit_held_vnd": 0, "legacy_pending": 0}
     for rental in rentals.prefetch_related(
         "lines", "finance_entries", "finance_charges"
@@ -139,11 +167,8 @@ def receivables(rentals):
             list(rental.finance_entries.all()),
             list(rental.finance_charges.all()),
         )
-        totals["deposit_held_vnd"] += ledger.deposit_held
-        if ledger.legacy_pending:
-            totals["legacy_pending"] += 1
-        else:
-            totals["balance_due_vnd"] += max(0, ledger.balance)
+        for key, value in snapshot_values(ledger).items():
+            totals[key] += value
     return totals
 
 
@@ -382,7 +407,9 @@ def post_finance_entry(
             raise RentalError(
                 "Cần điều chỉnh các giao dịch sử dụng khoản tiền này trước.", 409
             )
+    entry.shift = locked_shift_for_entry(kind, target)
     entry.save()
+    refresh_snapshot(rental)
     return entry
 
 
@@ -468,4 +495,5 @@ def review_finance_charge(actor, rental_id, charge_id, *, approve, notes):
     charge.reviewed_at = timezone.now()
     charge.review_note = notes
     charge.save(update_fields=["status", "reviewed_by", "reviewed_at", "review_note"])
+    refresh_snapshot(rental)
     return charge

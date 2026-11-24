@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .custody import lock_rental
 from .errors import RentalError
+from .finance import refresh_snapshot
 from .inventory import MAX_RENTAL_DAYS, free_assets, validate_period
 from .models import (
     AssetHandover,
@@ -273,6 +274,7 @@ def review_rental_change(staff, change_id, approve, review_note=""):
         rental.return_date = change.return_date
         rental.total_vnd = change.quoted_total_vnd
         rental.save(update_fields=["pickup_date", "return_date", "total_vnd"])
+        refresh_snapshot(rental)
 
     change.status = (
         RentalChangeRequest.Status.APPROVED

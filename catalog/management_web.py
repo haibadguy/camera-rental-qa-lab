@@ -75,13 +75,15 @@ def reports(request):
     context = {"form": form}
     if form.is_valid():
         try:
-            report = services.rental_report(request.user, **form.cleaned_data)
+            report = services.rental_report(request.user, **form.cleaned_data, limit_period=True)
         except services.RentalError as error:
             form.add_error(None, str(error))
         else:
             context.update(
                 {
                     "report": report,
+                    "stock_page": Paginator(report["stock"], 24).get_page(request.GET.get("stock_page")),
+                    "out_page": Paginator(report["out_assets"], 24).get_page(request.GET.get("out_page")),
                     "entries": Paginator(report["entries"], 15).get_page(
                         request.GET.get("cash_page")
                     ),

@@ -49,7 +49,7 @@
       <div class="section-heading"><h2 id="stock-heading">Tồn tại thời điểm xem</h2><a href="{% url 'stocktakes' %}">Phiên kiểm kê</a></div>
       <p class="muted">Ghi nhận lúc {{ report.generated_at|date:"d/m/Y H:i" }}</p>
       <ul class="workspace-rows">
-        {% for item in report.stock %}
+        {% for item in stock_page %}
           <li class="panel workspace-row">
             <div><strong>{{ item.code }}</strong><p>{{ item.name }}</p></div>
             <p>{{ item.available_now }} có sẵn · {{ item.outstanding }} đang thuê{% if not item.tracks_assets %} · Theo tồn tổng{% endif %}</p>
@@ -58,10 +58,24 @@
           <li class="panel empty-state">Chưa có thiết bị.</li>
         {% endfor %}
       </ul>
-      {% if report.out_assets %}
-        <details class="panel order-panel operation-section">
+      {% if stock_page.has_other_pages %}
+        <nav class="actions" aria-label="Trang tồn kho">
+          {% if stock_page.has_previous %}<a href="{% querystring stock_page=stock_page.previous_page_number %}#stock-heading">Trang trước</a>{% endif %}
+          <span>Trang {{ stock_page.number }} / {{ stock_page.paginator.num_pages }}</span>
+          {% if stock_page.has_next %}<a href="{% querystring stock_page=stock_page.next_page_number %}#stock-heading">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+      {% if out_page %}
+        <details class="panel order-panel operation-section" id="checked-out" {% if request.GET.out_page %}open{% endif %}>
           <summary>Mã kho đang thuê</summary>
-          <ul>{% for hold in report.out_assets %}<li>{{ hold.asset.code }} · <a href="{% url 'management-audit' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a></li>{% endfor %}</ul>
+          <ul>{% for hold in out_page %}<li>{{ hold.asset.code }} · <a href="{% url 'management-audit' hold.line.rental_id %}">Đơn #{{ hold.line.rental_id }}</a></li>{% endfor %}</ul>
+          {% if out_page.has_other_pages %}
+            <nav class="actions" aria-label="Trang mã kho đang thuê">
+              {% if out_page.has_previous %}<a href="{% querystring out_page=out_page.previous_page_number %}#checked-out">Trang trước</a>{% endif %}
+              <span>Trang {{ out_page.number }} / {{ out_page.paginator.num_pages }}</span>
+              {% if out_page.has_next %}<a href="{% querystring out_page=out_page.next_page_number %}#checked-out">Trang sau</a>{% endif %}
+            </nav>
+          {% endif %}
         </details>
       {% endif %}
     </section>

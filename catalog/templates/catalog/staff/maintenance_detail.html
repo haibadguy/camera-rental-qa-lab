@@ -34,6 +34,22 @@
         {% endif %}
       </dl>
     </section>
+    {% if photo_form %}
+      <section class="panel order-panel" aria-labelledby="photo-heading">
+        <h2 id="photo-heading">Ảnh sự cố</h2>
+        <ul>
+          {% for photo in photos %}
+            <li><a href="{% url 'incident-photo' case.pk photo.pk %}">Ảnh {{ photo.uploaded_at|date:"d/m/Y H:i" }}</a> · {{ photo.uploaded_by.get_username }}</li>
+          {% empty %}<li>Chưa có ảnh.</li>{% endfor %}
+        </ul>
+        <form method="post" enctype="multipart/form-data" class="operation-form">
+          {% csrf_token %}{{ photo_form.command_id }}{{ photo_form.command_id.errors }}
+          {{ photo_form.upload.as_field_group }}
+          <p class="muted">Tối đa ba ảnh, 5 MB mỗi ảnh. Ảnh được giữ 90 ngày.</p>
+          <button type="submit" name="action" value="photo">Đính ảnh</button>
+        </form>
+      </section>
+    {% endif %}
     {% if case.state != 'RESOLVED' %}
       <aside class="panel order-summary" aria-labelledby="case-actions">
         <h2 id="case-actions">Xử lý thiết bị</h2>

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
@@ -7,7 +8,17 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set.")
 DEBUG = os.environ.get("DJANGO_DEBUG") == "1"
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+STAGING = os.environ.get("DJANGO_STAGING") == "1"
+hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+ALLOWED_HOSTS = [host.strip() for host in hosts.split(",") if host.strip()]
+if STAGING:
+    if DEBUG or not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
+        raise ImproperlyConfigured("Staging requires explicit hosts and DEBUG=0.")
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 3600
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -20,6 +31,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,6 +68,9 @@ LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
 USE_TZ = True
 STATIC_URL = "/static/"
+STATIC_ROOT = Path(__file__).resolve().parent.parent / "staticfiles"
+INCIDENT_MEDIA_ROOT = Path(os.environ.get("INCIDENT_MEDIA_ROOT", "/tmp/camera-incidents"))
+CASH_SHIFT_REQUIRED = os.environ.get("CASH_SHIFT_REQUIRED") == "1"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 support_phone = os.environ.get("RENTAL_SUPPORT_PHONE", "").strip()

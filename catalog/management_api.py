@@ -47,7 +47,7 @@ class ResolutionInput(serializers.Serializer):
     notes = serializers.CharField(max_length=2000)
 
 
-class ReportSerializer(serializers.BaseSerializer):
+class ReportSummarySerializer(serializers.BaseSerializer):
     def to_representation(self, report):
         usage = report["usage"]
         return {
@@ -61,6 +61,12 @@ class ReportSerializer(serializers.BaseSerializer):
             "counts": report["counts"],
             "outstanding": report["outstanding"],
             "usage": {key: value for key, value in usage.items() if key != "rows"},
+        }
+
+
+class ReportSerializer(ReportSummarySerializer):
+    def to_representation(self, report):
+        return super().to_representation(report) | {
             "stock": [
                 {
                     "equipment_id": item.pk,

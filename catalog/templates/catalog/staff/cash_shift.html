@@ -1,0 +1,46 @@
+{% extends "catalog/base.html" %}
+{% load pricing %}
+{% block title %}Ca #{{ shift.pk }} | Camera Rental{% endblock %}
+{% block content %}
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{% url 'cash-shifts' %}">Ca thu ngân</a></nav>
+  <div class="page-heading"><h1>Ca #{{ shift.pk }}</h1><span class="status">{{ shift.get_status_display }}</span></div>
+  <section class="panel order-panel" aria-labelledby="shift-amounts">
+    <h2 id="shift-amounts">Đối soát theo phương thức</h2>
+    <dl class="details order-details">
+      <div><dt>Tiền mặt đầu ca</dt><dd>{{ shift.opening_cash_vnd|vnd }}</dd></div>
+      <div><dt>Tiền mặt kỳ vọng</dt><dd>{{ expected.cash|vnd }}</dd></div>
+      <div><dt>Chuyển khoản ròng kỳ vọng</dt><dd>{{ expected.transfer|vnd }}</dd></div>
+      {% if shift.submitted_at %}
+        <div><dt>Tiền mặt đếm được</dt><dd>{{ shift.counted_cash_vnd|vnd }}</dd></div>
+        <div><dt>Chuyển khoản ròng đối chiếu</dt><dd>{{ shift.confirmed_transfer_vnd|vnd }}</dd></div>
+        <div><dt>Chênh lệch tiền mặt</dt><dd>{{ shift.cash_difference_vnd|vnd }}</dd></div>
+        <div><dt>Chênh lệch chuyển khoản</dt><dd>{{ shift.transfer_difference_vnd|vnd }}</dd></div>
+        <div><dt>Người nộp ca</dt><dd>{{ shift.submitted_by.get_username }} · {{ shift.submitted_at|date:"d/m/Y H:i" }}</dd></div>
+      {% endif %}
+      {% if shift.closed_at %}
+        <div><dt>Người chốt</dt><dd>{{ shift.closed_by.get_username }} · {{ shift.closed_at|date:"d/m/Y H:i" }}</dd></div>
+      {% endif %}
+    </dl>
+    {% if shift.discrepancy_note %}<p>Lý do chênh lệch {{ shift.discrepancy_note }}</p>{% endif %}
+    {% if shift.resolution %}<p>Cách xử lý {{ shift.resolution }}</p>{% endif %}
+    {% if form %}
+      <form method="post" class="operation-form">
+        {% csrf_token %}{{ form.as_div }}
+        <button type="submit">{% if shift.submitted_at %}Chốt ca{% else %}Nộp ca{% endif %}</button>
+      </form>
+    {% endif %}
+  </section>
+  <section class="operation-section" aria-label="Giao dịch trong ca">
+    <h2>Giao dịch trong ca</h2>
+    <ul class="workspace-rows">
+      {% for entry in page %}
+        <li class="panel workspace-row">
+          <a href="{% url 'finance-ledger' entry.rental_id %}">Đơn #{{ entry.rental_id }} · Giao dịch #{{ entry.pk }}</a>
+          <span>{{ entry.get_kind_display }} · {% if entry.method %}{{ entry.method }}{% elif entry.reverses %}{{ entry.reverses.method }}{% endif %}</span>
+          <span>{{ entry.amount_vnd|vnd }} · {{ entry.recorded_by.get_username }}</span>
+        </li>
+      {% empty %}<li class="panel empty-state">Ca chưa có giao dịch.</li>{% endfor %}
+    </ul>
+    {% include "catalog/pagination.html" %}
+  </section>
+{% endblock %}
